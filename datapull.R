@@ -1,6 +1,15 @@
 library(dplyr)
 # Insert database connection information here #
-source("C:/Program Files/R/connectioninfoROracle.r")
+library(odbc)
+library(getPass)
+
+pacfin <- DBI::dbConnect(odbc::odbc(),
+  host   = "pacfindb.psmfc.org",
+  UID    = getPass('pacfin username'),
+  PWD    = getPass('pacfin password'),
+  dsn    = 'pacfin',
+  port   = 2045)
+
 preventingprintingtoconsole <- dbSendQuery(pacfin, "alter session set current_schema=PACFIN_MARTS")
 
 pacfin_dat_raw <- dbGetQuery(pacfin, "select landing_year,
