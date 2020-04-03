@@ -1,0 +1,67 @@
+---
+title: "List of state fisheries according to states"
+author: "Erin Steiner"
+date: "4/1/2020"
+output: html_document
+---
+
+# Washington State fisheries
+https://wdfw.wa.gov/fishing/commercial
+
+    - Commercial Dungeness crab fishery
+    - Commercial Puget Sound salmon fishery
+    - Commercial Willapa Bay and Grays Harbor gillnet salmon fishery
+    - Commercial wild stock geoduck clam fishery
+    - Commercial Puget Sound herring fishery
+    - Commercial Puget Sound smelt fishery
+    - Commercial razor clam fishery
+    - Commercial sea urchin fishery
+    - Commercial sea cucumber fishery
+    - Commercial coastal hagfish fishery
+    - Commercial coastal pink shrimp fishery
+    - Commercial albacore tuna fishery
+    - Commercial purse seine fishery for Pacific sardine
+    - Commercial coastal salmon fishery
+    - Commercial scallop regulations
+    - Commercial squid
+    
+# Oregon State fisheries
+    - Groundfish
+        - Nearshore commercial fishery regulations and action notices
+        - Limited entry fixed gear
+        - Open access fixed gear
+        - Limited entry trawl
+    - Market Squid
+    - Ocean salmon
+          - Ocean troll salmon
+          - Special state waters Chinook seasons
+    - Dungeness crab
+    - Pink shrimp
+    - Other commercial shellfish
+        - Crayfish information
+        - Sea urchin
+        - Other commercial shellfishing: https://www.dfw.state.or.us/MRP/shellfish/commercial/other_shellfish/index.asp
+    - Other commercial fisheries
+
+        - Columbia River commercial salmon
+        - Halibut (Area 2A non-tribal fisheries)
+        - Sharks and rays
+
+# California State fisheries (only ones with permits)
+
+    - California Halibut Bottom Trawl Vessel
+    - Drift Gill Net
+    - Dungeness Crab Vessel
+    - General Gill/Trammel Net
+    - Lobster Operator
+    - Market Squid Vessel
+    - Nearshore Fishery
+    - Northern Pink Shrimp Trawl
+    - Pacific Herring
+    - Salmon Vessel
+    - Sea Cucumber (Dive or Trawl)
+    - Southern Rock Crab Trap
+    - Spot Prawn Trap (Tier 1, 2, & 3)
+
+
+

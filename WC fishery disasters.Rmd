@@ -1,0 +1,28 @@
+---
+title: "Disaster Declarations and other problems"
+author: "Erin Steiner"
+date: "4/1/2020"
+output: html_document
+---
+
+# Official fishery disasters
+
+## California Pacific Sardine Fishery, 2017-2019
+
+## California Red Sea Urchin Fishery, 2016 and 2017 
+
+## California Red Sea Urchin Fishery, 2016
+
+## California Pacific Sardine Fishery, 2015-2016
+
+## Oregon and California Klamath River Fall Chinook Salmon Fishery, 2016 and 2017 
+
+## California Dungeness Crab and Rock Crab, 2015-2016
+
+## Washington Coastal Salmon, 2015 (Quinault and WA)
+
+# Other Changes
+
+# Whiting Blob, 2015
+
+# Tariffs, 2019
