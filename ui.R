@@ -19,6 +19,7 @@ shinyUI(fluidPage(
                       sidebarLayout(
                         sidebarPanel(uiOutput("layoutInput"), 
                                      conditionalPanel(condition = "input.layoutInput == 'Interactive plots'",
+                                                      uiOutput("activeInput"),
                                                       uiOutput("metricInput"),
                                                       uiOutput("mgrpInput"),
                                                       uiOutput("statInput"),

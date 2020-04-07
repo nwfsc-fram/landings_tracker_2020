@@ -213,7 +213,12 @@ comp_dat_final_cumul %>%
       lower = case_when(Statistic == 'Mean' ~ Value - Variance,
                         Statistic == 'Median' ~ q25,
                         Statistic == 'Total' ~ Value),
-    Type = ifelse(Type == 'cut35', '35% threshold', Type)) %>%
+    Type = ifelse(Type == 'cut35', '35% threshold', Type),
+    Active = case_when(Species %in% c('Non-whiting groundfish','Crab','Other species','Shellfish (incl. aquaculture)') ~ 'Y',
+                       Species == 'Coastal pelagics' & State == 'California' ~ 'Y',
+                       Species == 'Shrimp' & State == 'California' ~ 'Y',
+                       Species == 'Tuna' & State == 'California' ~ 'Y',
+                       T ~ 'N')) %>%
   data.frame() %>%
 saveRDS( "comp_dat_covidapp.RDS")
 

@@ -10,7 +10,7 @@ comp_dat_covid_app <- readRDS("comp_dat_covidapp.RDS")
 
 # Data formatting for plot ####
 data <- comp_dat_covid_app 
-
+data_active <- filter(comp_dat_covid_app, Active == 'Y')
 # Data formatting for table#####
 data_table <- comp_dat_covid_app %>%
   mutate(Value = round(Value, 2),
@@ -31,6 +31,13 @@ shinyServer(function(input, output, session) {
                  selected = "Interactive plots", inline = T)
 
   })
+  
+  # select active fisheries
+  output$activeInput <- renderUI({
+    sliderTextInput("activeInput", "Fisheries active Jan-Mar", choices = c('Active','Not active'),
+                    selected = 'Active', width = '50%')
+  })
+  
   # Select levels or Cumulative
   output$cumulInput <- renderUI({
     sliderTextInput("cumulInput", "Cumulative", choices = c('Y', 'N'),
@@ -39,8 +46,13 @@ shinyServer(function(input, output, session) {
   
   # Select management group
   output$mgrpInput <- renderUI({
+    if(input$activeInput == 'Not active') {
     selectInput("mgrpInput", "Species groups", choices = unique(data$Species), multiple = T,
                        selected = c('Non-whiting groundfish'))
+    } else {
+      selectInput("mgrpInput", "Species groups", choices = unique(data_active$Species), multiple = T,
+                  selected = c('Non-whiting groundfish'))
+    }
   })
   
   # Select a statistic
@@ -57,12 +69,21 @@ shinyServer(function(input, output, session) {
 
   
   filtered <- reactive({
+    if(input$activeInput == 'Not active') {
     data %>%
       filter(Species %in% c(input$mgrpInput),
              Statistic == input$statInput,
              Metric == input$metricInput,
              Cumulative == input$cumulInput
              )
+    } else {
+      data_active %>%
+        filter(Species %in% c(input$mgrpInput),
+               Statistic == input$statInput,
+               Metric == input$metricInput,
+               Cumulative == input$cumulInput
+        )
+    }
   })
   
   #creating the dataframe for data table#####
