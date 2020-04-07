@@ -6,6 +6,7 @@ library(shiny)
 library(ggplot2)
 library(dplyr)
 library(DT)
+library(plotly)
 
 
 ##UI part of the app. The ui piece is not reactive and is used for setting up the permanent pieces of the app.

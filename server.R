@@ -95,9 +95,11 @@ shinyServer(function(input, output, session) {
              !!quo_name(valuetitle)       := Value,
              !!quo_name(vartitle)         := Variance,
              `Quartile: 25th`              = q25,
-             `Quartile: 75th`              = q75)
+             `Quartile: 75th`              = q75,
+              Month                        = LANDING_MONTH,
+              Unit                         = unit)
     
-    alwaysexclude <- c('unit', 'Statistic')
+    alwaysexclude <- c('ylab','upper','lower','Type')
     dat <- select(dat, colnames(dat)[apply(dat, 2, function(x) sum(x != '' & x != ' NA' & !is.na(x) & x != 'NA') > 0 )], 
                   -alwaysexclude) 
     
