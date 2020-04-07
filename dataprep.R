@@ -4,8 +4,8 @@ library(reshape2)
 library(lubridate)
 library(EDCReport)
 
-# Insert database connection information here #
-source("C:/Program Files/R/connectioninfoROracle.r")
+# Set landing month cutoff for 2020; as of 4/7/2020 we only want to include 2020 data through March
+m_cutoff <- 3
 
 # Deflator #####
 # Currently coded to treat 2020 as 2019$
@@ -17,7 +17,12 @@ defl_adj <- rbind(defl, defl2020)
 
 # Load data from data_pull.R ####
 comp_dat_raw <- readRDS('comp_dat_raw.RDS') %>%
-  rename(YEAR = LANDING_YEAR)
+  rename(YEAR = LANDING_YEAR) %>%
+  # filter out data that is past the month cutoff
+  mutate(rm = case_when(YEAR == 2020 & LANDING_MONTH > m_cutoff ~ 1,
+                        T ~ 0)) %>%
+  filter(rm != 1) %>%
+  select(-rm)
 
 # Remove outliers
 comp_dat_outadj <- comp_dat_raw %>%
