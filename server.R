@@ -25,6 +25,12 @@ shinyServer(function(input, output, session) {
   ##Reactive component of the sidebar using renderUI and uiOutput functions####
   ##This allows us to update the sidebar based on other inputs##
   
+  # Select type of output
+  output$layoutInput <- renderUI({
+    radioButtons("layoutInput","Output type", choices = c("Interactive plots", "Data summaries"),
+                 selected = "Interactive plots", inline = T)
+
+  })
   # Select levels or Cumulative
   output$cumulInput <- renderUI({
     sliderTextInput("cumulInput", "Cumulative", choices = c('Y', 'N'),
@@ -145,6 +151,9 @@ shinyServer(function(input, output, session) {
       
     }
     
+  })
+  
+  output$datsmryPlot <- renderPlot({
   })
   
   # end hover code from stack overflow

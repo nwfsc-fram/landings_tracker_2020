@@ -17,21 +17,29 @@ shinyUI(fluidPage(
              title = "",
              tabPanel("Explore the data", value = "results",
                       sidebarLayout(
-                        sidebarPanel(uiOutput("metricInput"),
-                                     uiOutput("mgrpInput"),
-                                     uiOutput("statInput"),
-                                     uiOutput("cumulInput")
+                        sidebarPanel(uiOutput("layoutInput"), 
+                                     conditionalPanel(condition = "input.layoutInput == 'Interactive plots'",
+                                                      uiOutput("metricInput"),
+                                                      uiOutput("mgrpInput"),
+                                                      uiOutput("statInput"),
+                                                      uiOutput("cumulInput"))
                           ),
                         mainPanel(
                           tabsetPanel(type = "tabs",
                                       tabPanel("Plot", 
-                                        plotlyOutput("plot",
+                                               conditionalPanel(condition = "input.layoutInput == 'Interactive plots'",
+                                                                plotlyOutput("plot")),
+                                               conditionalPanel(condition = "input.layoutInput == 'Data summaries'",
+                                                                plotOutput("datsmryPlot"))
+                                               ),
                                        # hover = hoverOpts(id ="plot_hover", delay = 50)
-                                          )),
+
                                        # verbatimTextOutput("hover_info"),
                                        # Size parameters don't work with plotly
                                         # height = "1600px"),
-                                      tabPanel("Table", DT::dataTableOutput("table"))
+                                      tabPanel("Table", 
+                                               conditionalPanel(condition = "input.layoutInput == 'Interactive plots'",
+                                                                DT::dataTableOutput("table")))
                           )
                         )
                       )#,
