@@ -111,7 +111,7 @@ comp_dat_final <- rbind(comp_dat_avg, comp_dat_tot, comp_dat_n) %>%
                                    SPECIES_GROUP == 'TUNA' ~ 'Tuna',
                                    SPECIES_GROUP == 'OTHER' ~ 'Other species',
                                    SPECIES_GROUP == 'SALMON' ~ 'Salmon',
-                                   SPECIES_GROUP == 'SHELLFISH' ~ 'Shellfish',
+                                   SPECIES_GROUP == 'SHELLFISH' ~ 'Shellfish (incl. aquaculture)',
                                    SPECIES_GROUP == 'SHRIMP' ~ 'Shrimp',
                                    SPECIES_GROUP == 'WHITING' ~ 'Whiting',
            T ~ 'help'),
@@ -120,7 +120,10 @@ comp_dat_final <- rbind(comp_dat_avg, comp_dat_tot, comp_dat_n) %>%
                                  AGENCY_CODE == 'C' ~ 'California',
                                  AGENCY_CODE %in% c('All') ~ 'All states',
                                  AGENCY_CODE %in% c('F') ~ 'At-sea',
-           T ~ 'help')) %>%
+           T ~ 'help'),
+         # decided to only present shellfish for Washington
+         rm = case_when(SPECIES_GROUP == 'Shellfish (incl. aquaculture)' & AGENCY_CODE != 'Washington' ~ 1,
+                        T ~ 0)) %>%
   group_by(Metric, Statistic) %>%
   mutate(unit = case_when(max(Value, na.rm = T) < 1e3 ~ '',
                           max(Value, na.rm = T) < 1e6 ~ 'thousands',
@@ -144,7 +147,9 @@ comp_dat_final <- rbind(comp_dat_avg, comp_dat_tot, comp_dat_n) %>%
     ) %>%
   rename(State = AGENCY_CODE,
          Species = SPECIES_GROUP,
-         Year = YEAR)
+         Year = YEAR) %>%
+  filter(rm != 1) %>%
+  select(-rm)
 
 # Cut 35 are calculated using the untreated data ####
 cut35 <- subset(comp_dat_final, Year != 2020 & CONF == 'NOT_TREATED') %>%
