@@ -21,6 +21,7 @@ shinyUI(fluidPage(
                                      conditionalPanel(condition = "input.layoutInput == 'Interactive plots'",
                                                       uiOutput("activeInput"),
                                                       uiOutput("metricInput"),
+                                                      uiOutput("regionInput"),
                                                       uiOutput("mgrpInput"),
                                                       uiOutput("statInput"),
                                                       uiOutput("cumulInput"))

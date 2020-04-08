@@ -54,6 +54,18 @@ shinyServer(function(input, output, session) {
                   selected = c('Non-whiting groundfish'))
     }
   })
+  # select state
+  output$regionInput <- renderUI({
+    if(!input$mgrpInput %in% c('Whiting')) {
+    checkboxGroupInput("regionInput", "State", choices = c('All states','California','Oregon','Washington'),
+                       selected = c('All states'),
+                       inline = T)
+    } else {
+      checkboxGroupInput("regionInput", "State", choices = c('All states','California','Oregon','Washington', 'At-sea'),
+                         selected = c('All states'),
+                         inline = T)
+    }
+  })
   
   # Select a statistic
   output$statInput <- renderUI({
@@ -74,14 +86,16 @@ shinyServer(function(input, output, session) {
       filter(Species %in% c(input$mgrpInput),
              Statistic == input$statInput,
              Metric == input$metricInput,
-             Cumulative == input$cumulInput
+             Cumulative == input$cumulInput,
+             State %in% c(input$regionInput)
              )
     } else {
       data_active %>%
         filter(Species %in% c(input$mgrpInput),
                Statistic == input$statInput,
                Metric == input$metricInput,
-               Cumulative == input$cumulInput
+               Cumulative == input$cumulInput,
+               State %in% c(input$regionInput)
         )
     }
   })
@@ -93,7 +107,8 @@ shinyServer(function(input, output, session) {
         filter(Metric == input$metricInput,
                Statistic == input$statInput,
                Species %in% c(input$mgrpInput),
-               Cumulative == input$cumulInput)
+               Cumulative == input$cumulInput,
+               State %in% c(input$regionInput))
   })
   
   dt_dat <- reactive({
