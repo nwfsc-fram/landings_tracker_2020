@@ -34,7 +34,7 @@ shinyServer(function(input, output, session) {
   
   # select active fisheries
   output$activeInput <- renderUI({
-    sliderTextInput("activeInput", "Fisheries active Jan-Mar", choices = c('Active','Not active'),
+    sliderTextInput("activeInput", "Fisheries active Jan-Mar", choices = c('Active','All fisheries'),
                     selected = 'Active', width = '50%')
   })
   
@@ -46,7 +46,7 @@ shinyServer(function(input, output, session) {
   
   # Select management group
   output$mgrpInput <- renderUI({
-    if(input$activeInput == 'Not active') {
+    if(input$activeInput == 'All fisheries') {
     selectInput("mgrpInput", "Species groups", choices = unique(data$Species), multiple = T,
                        selected = c('Non-whiting groundfish'))
     } else {
@@ -69,7 +69,7 @@ shinyServer(function(input, output, session) {
 
   
   filtered <- reactive({
-    if(input$activeInput == 'Not active') {
+    if(input$activeInput == 'All fisheries') {
     data %>%
       filter(Species %in% c(input$mgrpInput),
              Statistic == input$statInput,
