@@ -163,17 +163,32 @@ comp_dat_final <- rbind(comp_dat_avg, comp_dat_tot, comp_dat_n) %>%
   select(-rm)
 
 # Cut 35 are calculated using the untreated data ####
-cut35 <- subset(comp_dat_final, Year != 2020 & CONF == 'NOT_TREATED') %>%
+# We need to remove 2015/2016 disaster years from the calculation of 35% for crab
+cut35_crab <- filter(comp_dat_final, !Year %in% c(2015, 2016, 2020) & CONF == 'NOT_TREATED' 
+                         & grepl('crab', Species)) %>%
   group_by(Species, State, LANDING_MONTH, Metric, Statistic, unit, ylab) %>%
   summarise(Value = median(Value) * .65) %>%
   mutate(Year = 'cut35')
 
-comp_dat_final_cut <- rbind(comp_dat_final, cut35) %>%
+cut35_sardine <- filter(comp_dat_final, !Year %in% 2015:2020 & CONF == 'NOT_TREATED' 
+                        & Species == 'Sardine') %>%
+  group_by(Species, State, LANDING_MONTH, Metric, Statistic, unit, ylab) %>%
+  summarise(Value = median(Value) * .65) %>%
+  mutate(Year = 'cut35')
+
+cut35 <- subset(comp_dat_final, Year != 2020 & CONF == 'NOT_TREATED' & !grepl('crab', Species) & Species != 'Sardine') %>%
+  group_by(Species, State, LANDING_MONTH, Metric, Statistic, unit, ylab) %>%
+  summarise(Value = median(Value) * .65) %>%
+  mutate(Year = 'cut35')
+
+comp_dat_final_cut <- rbind(comp_dat_final, cut35, cut35_crab, cut35_sardine) %>%
   mutate(Type = ifelse(Year %in% 2014:2019, '2014-2019',
     Year),
     Cumulative = 'N')
 
-comp_dat_final_cumul <- subset(comp_dat_final_cut, Statistic == 'Total' & Metric %in% c('Landed weight', 'Exvessel revenue') & CONF == 'NOT_TREATED') %>%
+comp_dat_final_cumul <- subset(comp_dat_final_cut, Statistic == 'Total' 
+                               & Metric %in% c('Landed weight', 'Exvessel revenue') 
+                               & CONF == 'NOT_TREATED') %>%
   group_by(Species, State, Year, Metric, Statistic, unit, ylab) %>%
   mutate(Value = cumsum(Value)) %>%
   mutate(Cumulative = 'Y') %>%
