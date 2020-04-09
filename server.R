@@ -18,6 +18,12 @@ data_table <- comp_dat_covid_app %>%
          q25 = round(q25, 2),
          q75 = round(q75, 2)) %>%
   data.frame()
+data_table_active <- filter(comp_dat_covid_app, Active == 'Y') %>%
+  mutate(Value = round(Value, 2),
+         Variance = round(Variance, 2),
+         q25 = round(q25, 2),
+         q75 = round(q75, 2)) %>%
+  data.frame()
 
 ## SERVER part of the app.####
 # The server piece contains all reactive components.
@@ -35,7 +41,7 @@ shinyServer(function(input, output, session) {
   # select active fisheries
   output$activeInput <- renderUI({
     sliderTextInput("activeInput", "Fisheries active Jan-Mar", choices = c('Active','All fisheries'),
-                    selected = 'Active', width = '50%')
+                    selected = 'All fisheries', width = '50%')
   })
   
   # Select levels or Cumulative
@@ -103,12 +109,21 @@ shinyServer(function(input, output, session) {
   #creating the dataframe for data table#####
   ##Use reactive to reactively filter the dataframe based on inputs
   filtered_dt <- reactive({
+    if(input$activeInput == 'All fisheries') {
       data_table %>%
         filter(Metric == input$metricInput,
                Statistic == input$statInput,
                Species %in% c(input$mgrpInput),
                Cumulative == input$cumulInput,
                State %in% c(input$regionInput))
+    } else {
+      data_table_active %>%
+        filter(Metric == input$metricInput,
+               Statistic == input$statInput,
+               Species %in% c(input$mgrpInput),
+               Cumulative == input$cumulInput,
+               State %in% c(input$regionInput))
+    }
   })
   
   dt_dat <- reactive({

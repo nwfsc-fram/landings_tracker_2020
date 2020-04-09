@@ -19,12 +19,12 @@ shinyUI(fluidPage(
                       sidebarLayout(
                         sidebarPanel(uiOutput("layoutInput"), 
                                      conditionalPanel(condition = "input.layoutInput == 'Interactive plots'",
-                                                      uiOutput("activeInput"),
                                                       uiOutput("metricInput"),
                                                       uiOutput("regionInput"),
                                                       uiOutput("mgrpInput"),
                                                       uiOutput("statInput"),
-                                                      uiOutput("cumulInput"))
+                                                      uiOutput("cumulInput"),
+                                                      uiOutput("activeInput"))
                           ),
                         mainPanel(
                           tabsetPanel(type = "tabs",
