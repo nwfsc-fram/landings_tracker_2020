@@ -195,8 +195,11 @@ shinyServer(function(input, output, session) {
   # end hover code from stack overflow
   
   ##Creating the data table
-  output$table <- DT::renderDataTable({
+  output$table <- DT::renderDT({
     datatable(dt_dat(), 
-              rownames = FALSE)
+              rownames = FALSE,
+    filter = "top",
+      options = list(pageLength = 24)
+      )
   })
 })
