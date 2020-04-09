@@ -191,6 +191,7 @@ shinyServer(function(input, output, session) {
             axis.title.y = element_text(size = 12)) +
       #scale_x_date(date_labels = '%b', date_minor_breaks = "1 month") +
       geom_line(aes(color = Type), size = 0.6) +
+      geom_point(aes(color = Type), size = 3) +
       facet_wrap(~ylab, scales = 'free_y', ncol = 2) +
       labs(y = paste(input$statInput, input$metricInput)),
     tooltip = 'Year',
