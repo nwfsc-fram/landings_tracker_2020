@@ -195,4 +195,6 @@ norpac_dat_raw <- dbGetQuery(pacfin, "SELECT landing_year,
 
 comp_dat_raw <- rbind(pacfin_dat_raw, norpac_dat_raw) %>%
         data.frame()
+saveRDS(comp_dat_raw, paste0("comp_dat_raw", Sys.Date(), ".RDS"))
+
 saveRDS(comp_dat_raw, "comp_dat_raw.RDS")
