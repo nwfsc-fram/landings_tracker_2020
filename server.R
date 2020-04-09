@@ -48,10 +48,10 @@ shinyServer(function(input, output, session) {
   output$mgrpInput <- renderUI({
     if(input$activeInput == 'All fisheries') {
     selectInput("mgrpInput", "Species groups", choices = unique(data$Species), multiple = T,
-                       selected = c('Non-whiting groundfish'))
+                       selected = c('Non-whiting groundfish (IFQ)'))
     } else {
       selectInput("mgrpInput", "Species groups", choices = unique(data_active$Species), multiple = T,
-                  selected = c('Non-whiting groundfish'))
+                  selected = c('Non-whiting groundfish (IFQ)'))
     }
   })
   # select state

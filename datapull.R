@@ -26,25 +26,34 @@ pacfin_dat_raw <- dbGetQuery(pacfin, "select landing_year,
                                       CASE WHEN 
                                         pacfin_species_common_name like '%TUNA%' OR pacfin_species_common_name = 'ALBACORE' 
                                         THEN 'TUNA'
-                                        WHEN 
-                                        management_group_code = 'GRND'
-                                        THEN CASE WHEN 
-                                                pacfin_species_code = 'PWHT' THEN 'WHITING'
-                                                ELSE 'NON-WHITING GROUNDFISH'
-                                                END
+                                        WHEN management_group_code = 'GRND' THEN 
+                                          CASE WHEN IS_IFQ_LANDING = 'T' THEN 
+                                            CASE WHEN pacfin_species_code = 'PWHT' THEN 'WHITING'
+                                              ELSE 'NON-WHITING GROUNDFISH IFQ' END
+                                          ELSE 'NON-WHITING GROUNDFISH NON-IFQ' END
                                         WHEN 
                                         management_group_code = 'CPEL'
                                         THEN CASE WHEN 
-                                                pacfin_species_code IN ('CMCK','JMCK','MSQD','NANC','PSDN','UMCK') THEN 'COASTAL PELAGIC'
+                                                pacfin_species_code = 'PSDN' THEN 'SARDINE'
+                                                WHEN
+                                                pacfin_species_code = 'NANC' THEN 'ANCHOVY'
+                                                WHEN
+                                                pacfin_species_code = 'MSQD' THEN 'MARKET SQUID'
+                                                WHEN
+                                                pacfin_species_code IN ('CMCK','JMCK','UMCK') THEN 'OTHER COASTAL PELAGIC'
                                                 ELSE 'OTHER'
                                                 END 
+                                        WHEN
+                                        management_group_code = 'CRAB'
+                                        THEN CASE WHEN 
+                                        pacfin_species_code = 'DCRB' THEN 'DUNGENESS CRAB'
+                                        ELSE 'OTHER CRAB'
+                                        END
                            -- CDK - Changind CPEL to Coastal Pelagic from Other and included only species specified by Steve Stohs as CPS
                                         WHEN management_group_code = 'HMSP'             
                                         THEN 'OTHER'
                                         WHEN management_group_code = 'SAMN'             
                                         THEN 'SALMON'
-                                        WHEN management_group_code = 'CRAB'             
-                                        THEN 'CRAB'
                                         WHEN management_group_code = 'SRMP'             
                                         THEN 'SHRIMP'
                                         WHEN management_group_code = 'SHLL'             
@@ -80,25 +89,34 @@ pacfin_dat_raw <- dbGetQuery(pacfin, "select landing_year,
                                         CASE WHEN 
                                         pacfin_species_common_name like '%TUNA%' OR pacfin_species_common_name = 'ALBACORE' 
                                         THEN 'TUNA'
-                                        WHEN 
-                                        management_group_code = 'GRND'
-                                        THEN CASE WHEN 
-                                                pacfin_species_code = 'PWHT' THEN 'WHITING'
-                                                ELSE 'NON-WHITING GROUNDFISH'
-                                                END
-                                        WHEN 
+                                        WHEN management_group_code = 'GRND' THEN 
+                                          CASE WHEN IS_IFQ_LANDING = 'T' THEN 
+                                            CASE WHEN pacfin_species_code = 'PWHT' THEN 'WHITING'
+                                              ELSE 'NON-WHITING GROUNDFISH IFQ' END
+                                          ELSE 'NON-WHITING GROUNDFISH NON-IFQ' END
+                                         WHEN 
                                         management_group_code = 'CPEL'
                                         THEN CASE WHEN 
-                                                pacfin_species_code IN ('CMCK','JMCK','MSQD','NANC','PSDN','UMCK') THEN 'COASTAL PELAGIC'
+                                                pacfin_species_code = 'PSDN' THEN 'SARDINE'
+                                                WHEN
+                                                pacfin_species_code = 'NANC' THEN 'ANCHOVY'
+                                                WHEN
+                                                pacfin_species_code = 'MSQD' THEN 'MARKET SQUID'
+                                                WHEN
+                                                pacfin_species_code IN ('CMCK','JMCK','UMCK') THEN 'OTHER COASTAL PELAGIC'
                                                 ELSE 'OTHER'
                                                 END 
-                           --CDK - Changind CPEL to Coastal Pelagic from Other and included only species specified by Steve Stohs as CPS
+                                        WHEN
+                                        management_group_code = 'CRAB'
+                                        THEN CASE WHEN 
+                                        pacfin_species_code = 'DCRB' THEN 'DUNGENESS CRAB'
+                                        ELSE 'OTHER CRAB'
+                                        END
+                           -- CDK - Changind CPEL to Coastal Pelagic from Other and included only species specified by Steve Stohs as CPS
                                         WHEN management_group_code = 'HMSP'             
                                         THEN 'OTHER'
                                         WHEN management_group_code = 'SAMN'             
                                         THEN 'SALMON'
-                                        WHEN management_group_code = 'CRAB'             
-                                        THEN 'CRAB'
                                         WHEN management_group_code = 'SRMP'             
                                         THEN 'SHRIMP'
                                         WHEN management_group_code = 'SHLL'             
@@ -118,25 +136,32 @@ norpac_dat_raw <- dbGetQuery(pacfin, "SELECT landing_year,
                                       CASE WHEN 
                                         pacfin_species_common_name like '%TUNA%' OR pacfin_species_common_name = 'ALBACORE' 
                                         THEN 'TUNA'
-                                        WHEN 
-                                        management_group_code = 'GRND'
-                                        THEN CASE WHEN 
-                                                pacfin_species_code = 'PWHT' THEN 'WHITING'
-                                                ELSE 'NON-WHITING GROUNDFISH'
-                                                END
+                                        WHEN management_group_code = 'GRND' THEN 
+                                            CASE WHEN pacfin_species_code = 'PWHT' THEN 'WHITING'
+                                              ELSE 'NON-WHITING GROUNDFISH IFQ' END
                                         WHEN 
                                         management_group_code = 'CPEL'
                                         THEN CASE WHEN 
-                                                pacfin_species_code IN ('CMCK','JMCK','MSQD','NANC','PSDN','UMCK') THEN 'COASTAL PELAGIC'
+                                                pacfin_species_code = 'PSDN' THEN 'SARDINE'
+                                                WHEN
+                                                pacfin_species_code = 'NANC' THEN 'ANCHOVY'
+                                                WHEN
+                                                pacfin_species_code = 'MSQD' THEN 'MARKET SQUID'
+                                                WHEN
+                                                pacfin_species_code IN ('CMCK','JMCK','UMCK') THEN 'OTHER COASTAL PELAGIC'
                                                 ELSE 'OTHER'
                                                 END 
+                                        WHEN
+                                        management_group_code = 'CRAB'
+                                        THEN CASE WHEN 
+                                        pacfin_species_code = 'DCRB' THEN 'DUNGENESS CRAB'
+                                        ELSE 'OTHER CRAB'
+                                        END
                            -- CDK - Changind CPEL to Coastal Pelagic from Other and included only species specified by Steve Stohs as CPS
                                         WHEN management_group_code = 'HMSP'             
                                         THEN 'OTHER'
                                         WHEN management_group_code = 'SAMN'             
                                         THEN 'SALMON'
-                                        WHEN management_group_code = 'CRAB'             
-                                        THEN 'CRAB'
                                         WHEN management_group_code = 'SRMP'             
                                         THEN 'SHRIMP'
                                         WHEN management_group_code = 'SHLL'             
@@ -147,7 +172,7 @@ norpac_dat_raw <- dbGetQuery(pacfin, "SELECT landing_year,
                                         END species_group,
                                    SUM(retained_weight_mtons) AS round_weight_mtons,
                                    SUM(exvessel_revenue) AS exvessel_revenue
-                                   FROM comprehensive_npac
+                                   FROM pacfin_marts.comprehensive_npac
                                    WHERE
                                    pacfin_species_code != 'XXXX'
                                    AND retained_weight_lbs != 0
@@ -163,25 +188,32 @@ norpac_dat_raw <- dbGetQuery(pacfin, "SELECT landing_year,
                                       CASE WHEN 
                                         pacfin_species_common_name like '%TUNA%' OR pacfin_species_common_name = 'ALBACORE' 
                                         THEN 'TUNA'
-                                        WHEN 
-                                        management_group_code = 'GRND'
-                                        THEN CASE WHEN 
-                                                pacfin_species_code = 'PWHT' THEN 'WHITING'
-                                                ELSE 'NON-WHITING GROUNDFISH'
-                                                END
+                                        WHEN management_group_code = 'GRND' THEN
+                                            CASE WHEN pacfin_species_code = 'PWHT' THEN 'WHITING'
+                                              ELSE 'NON-WHITING GROUNDFISH IFQ' END
                                         WHEN 
                                         management_group_code = 'CPEL'
                                         THEN CASE WHEN 
-                                                pacfin_species_code IN ('CMCK','JMCK','MSQD','NANC','PSDN','UMCK') THEN 'COASTAL PELAGIC'
+                                                pacfin_species_code = 'PSDN' THEN 'SARDINE'
+                                                WHEN
+                                                pacfin_species_code = 'NANC' THEN 'ANCHOVY'
+                                                WHEN
+                                                pacfin_species_code = 'MSQD' THEN 'MARKET SQUID'
+                                                WHEN
+                                                pacfin_species_code IN ('CMCK','JMCK','UMCK') THEN 'OTHER COASTAL PELAGIC'
                                                 ELSE 'OTHER'
                                                 END 
+                                        WHEN
+                                        management_group_code = 'CRAB'
+                                        THEN CASE WHEN 
+                                        pacfin_species_code = 'DCRB' THEN 'DUNGENESS CRAB'
+                                        ELSE 'OTHER CRAB'
+                                        END
                            -- CDK - Changind CPEL to Coastal Pelagic from Other and included only species specified by Steve Stohs as CPS
                                         WHEN management_group_code = 'HMSP'             
                                         THEN 'OTHER'
                                         WHEN management_group_code = 'SAMN'             
                                         THEN 'SALMON'
-                                        WHEN management_group_code = 'CRAB'             
-                                        THEN 'CRAB'
                                         WHEN management_group_code = 'SRMP'             
                                         THEN 'SHRIMP'
                                         WHEN management_group_code = 'SHLL'             
