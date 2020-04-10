@@ -1,3 +1,5 @@
+.libPaths(c("/usr/lib64/R/shiny_library/fisheye", .libPaths()))
+
 library(shiny)
 library(ggplot2)
 library(dplyr)

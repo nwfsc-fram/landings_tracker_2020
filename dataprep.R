@@ -168,8 +168,8 @@ comp_dat_final_cumul <- subset(comp_dat_final_cut, Statistic == 'Total'
   ungroup()
 
 all_combos <- comp_dat_final_cumul %>%
-  select(Year, State, LANDING_MONTH, Statistic, Metric, Cumulative) %>%
-  expand(Year, State, LANDING_MONTH, Statistic, Metric, Cumulative) %>%
+  select(Year, State, LANDING_MONTH, Statistic, Metric, Cumulative, Type) %>%
+  expand(Year, State, LANDING_MONTH, Statistic, Metric, Cumulative, Type) %>%
   merge((comp_dat_final_cumul %>%
            select(Species) %>%
            distinct()), all = T)
