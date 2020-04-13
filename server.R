@@ -170,24 +170,14 @@ shinyServer(function(input, output, session) {
              !!quo_name(vartitle)         := Variance,
              `Quartile: 25th`              = q25,
              `Quartile: 75th`              = q75,
-              Month                        = LANDING_MONTH,
+              Date                        = Date,
               Unit                         = unit)
     
-    alwaysexclude <- c('ylab','upper','lower','Type')
+    alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH','Active')
     dat <- select(dat, colnames(dat)[apply(dat, 2, function(x) sum(x != '' & x != ' NA' & !is.na(x) & x != 'NA') > 0 )], 
                   -alwaysexclude) 
     
     return(dat)
-  })
-  
-  plot_dat <- reactive({
-    if(input$wkInput == 'Monthly') {
-      plot_dat <- filtered() %>%
-      mutate(LANDING_MONTH = month(LANDING_MONTH, label = T))
-    } else{
-      plot_dat <- filtered()
-    }
-    return(plot_dat)
   })
   
   lineColor <- c(
@@ -203,7 +193,7 @@ shinyServer(function(input, output, session) {
     } else {
           print(
       ggplotly(
-    ggplot(plot_dat(),
+    ggplot(filtered(),
            aes(x = LANDING_MONTH,
                y = Value,
                color = Type, 
@@ -215,9 +205,9 @@ shinyServer(function(input, output, session) {
             strip.text = element_text(size = 10),
             axis.title.x = element_blank(),
             axis.title.y = element_text(size = 12)) +
-      #scale_x_date(date_labels = '%b', date_minor_breaks = "1 month") +
+      scale_x_date(date_labels = '%b', date_breaks = "1 month") +
       geom_line(aes(color = Type), size = 0.6) +
-      geom_point(data = filter(plot_dat(), Type != '2014-2019'),
+      geom_point(data = filter(filtered(), Type != '2014-2019'),
                  mapping = aes(color = Type), size = 1.5) +
       facet_wrap(~ylab, scales = 'free_y', ncol = 2) +
       labs(y = paste(input$statInput, input$metricInput)),

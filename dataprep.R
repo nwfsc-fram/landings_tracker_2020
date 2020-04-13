@@ -314,12 +314,22 @@ app_data <-  comp_dat_final_cumul_0s %>%
                        Species %in% c('Sardine','Anchovy', 'Other coastal pelagic') & State == 'California' ~ 'Y',
                        Species == 'Shrimp' & State == 'California' ~ 'Y',
                        Species == 'Tuna' & State == 'California' ~ 'Y',
-                       T ~ 'N')) %>%
+                       T ~ 'N'),
+    # Formatting the date so it can be plotted appropriately
+    Date = case_when(Interval == 'Weekly' & LANDING_MONTH < 2 ~ as.Date(paste0(Year,'-01-01')),
+                     Interval == 'Weekly' & LANDING_MONTH > 1 ~ as.Date(lubridate::parse_date_time(
+                       paste(Year, LANDING_MONTH, 'Sun', sep="/"),'Y/W/a')),
+                     Interval == 'Monthly' ~ ymd(paste0(Year, '-', LANDING_MONTH, '-01'))),
+    LANDING_MONTH = case_when(Interval == 'Weekly' & LANDING_MONTH < 2 ~ as.Date('2001-01-01'),
+                              Interval == 'Weekly' & LANDING_MONTH > 1 ~ as.Date(lubridate::parse_date_time(
+                                paste(2001, LANDING_MONTH, 'Sun', sep="/"),'Y/W/a')),
+                              Interval == 'Monthly' ~ ymd(paste0('2001', LANDING_MONTH, '-01')))) %>%
   filter(rm != 1) %>%
   select(-rm) %>%
   data.frame()
 
 saveRDS(app_data, "comp_dat_covidapp.RDS")
+
 
 # numbers of years where 2020 is lower
 
