@@ -24,13 +24,12 @@ comp_dat_raw <- readRDS('comp_dat_raw.RDS') %>%
   mutate(rm = case_when(YEAR == 2020 & LANDING_MONTH > m_cutoff ~ 1,
                         T ~ 0)) %>%
   filter(rm != 1) %>%
-  select(-rm)
+  select(-rm) 
 
-# Remove outliers
+# Add in price metric and Remove outliers
 comp_dat_outadj <- comp_dat_raw %>%
   mutate(price = EXVESSEL_REVENUE/(ROUND_WEIGHT_MTONS*2204.62)) %>%
-  filter(price < 150) %>%
-  select(-price)
+  filter(price < 150) 
 
 # Data formatting ####
 # Adding date variables to use in data summaries
@@ -46,7 +45,7 @@ comp_dat_sub <- filter(comp_dat_fmt#, DAYOFYEAR <= max_2020
          Value = value) %>%
   # Deflator is being used here #
   merge(defl_adj) %>%
-  mutate(Value = case_when(Metric == 'EXVESSEL_REVENUE' ~ Value/DEFL,
+  mutate(Value = case_when(Metric %in% c('EXVESSEL_REVENUE', 'price') ~ Value/DEFL,
                            T ~ Value)) %>%
   select(-DEFL)
 
@@ -98,10 +97,24 @@ comp_dat_avg <- filter(comp_dat_full, !is.na(VESSEL_NUM)) %>% # we need to remov
   rename(Statistic = variable,
          Value = value)
 # Calculating the total rev/mt by species group, agency_code, and month  
-comp_dat_tot <- comp_dat_full %>%
+comp_dat_tot_revlbs <- filter(comp_dat_full, Metric != 'price') %>%
   group_by(SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval) %>%
   summarize(Value = sum(Value),
+            N = length(unique(VESSEL_NUM)))
+
+comp_dat_tot_price <- comp_dat_full %>%
+  dcast(YEAR + VESSEL_NUM + DEALER_NUM + SPECIES_GROUP + LANDING_MONTH + 
+          AGENCY_CODE + CONF + Interval ~ Metric, value.var = 'Value') %>%
+  group_by(SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, CONF, Interval) %>%
+  summarize(EXVESSEL_REVENUE = sum(EXVESSEL_REVENUE),
+            ROUND_WEIGHT_MTONS = sum(ROUND_WEIGHT_MTONS),
+            Value = EXVESSEL_REVENUE/(ROUND_WEIGHT_MTONS*2204.62),
             N = length(unique(VESSEL_NUM))) %>%
+  select(-EXVESSEL_REVENUE,-ROUND_WEIGHT_MTONS) %>%
+  mutate(Metric = 'price')
+
+  
+comp_dat_tot <- rbind(comp_dat_tot_revlbs, comp_dat_tot_price) %>%
   mutate(Statistic = 'Total',
          q25 = NA_real_,
          q75 = NA_real_,
@@ -204,6 +217,7 @@ comp_dat_final_cumul_0s <- merge(all_combos, comp_dat_final_cumul, all.x = T)
 app_data <-  comp_dat_final_cumul_0s %>%
   mutate(Metric = case_when(Metric == 'EXVESSEL_REVENUE' ~ 'Exvessel revenue',
                             Metric == 'ROUND_WEIGHT_MTONS' ~ 'Landed weight',
+                            Metric == 'price' ~ 'Price (per lb)',
                             T ~ as.character(Metric)),
          Species = case_when(Species == 'OTHER COASTAL PELAGIC' ~ 'Other coastal pelagic',
                              Species == 'ANCHOVY' ~ 'Anchovy',
@@ -249,7 +263,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
          q75 = case_when(Year != 2020 ~ NA_real_,
                          T ~ q75),
          Year = as.factor(Year),
-         ylab = case_when(Metric == 'Exvessel revenue' ~
+         ylab = case_when(Metric %in% c('Exvessel revenue', 'Price (per lb)') ~
                             paste0(State, ": ", Species, "\n(", unit, " 2019$)"),
                           Metric == 'Landed weight' ~
                             paste0(State, ": ", Species, "\n(", unit, " mt)"),
