@@ -52,6 +52,12 @@ shinyServer(function(input, output, session) {
       selected = 'N', width = '25%')
   })
   
+  # Select weekly or monthly
+  output$wkInput <- renderUI({
+    sliderTextInput("wkInput", "Time interval", choices = c('Weekly', 'Monthly'),
+                    selected = 'Monthly', width = '25%')
+  })
+  
   # Select management group
   output$mgrpInput <- renderUI({
     if(input$activeInput == 'All fisheries') {
@@ -95,15 +101,17 @@ shinyServer(function(input, output, session) {
              Statistic == input$statInput,
              Metric == input$metricInput,
              Cumulative == input$cumulInput,
-             State %in% c(input$regionInput)
-             )
+             State %in% c(input$regionInput),
+             Interval %in% c(input$wkInput)
+             ) 
     } else {
       data_active %>%
         filter(Species %in% c(input$mgrpInput),
                Statistic == input$statInput,
                Metric == input$metricInput,
                Cumulative == input$cumulInput,
-               State %in% c(input$regionInput)
+               State %in% c(input$regionInput),
+               Interval == input$wkInput
         )
     }
   })
@@ -117,19 +125,26 @@ shinyServer(function(input, output, session) {
                Statistic == input$statInput,
                Species %in% c(input$mgrpInput),
                Cumulative == input$cumulInput,
-               State %in% c(input$regionInput))
+               State %in% c(input$regionInput),
+               Interval == input$wkInput)
     } else {
       data_table_active %>%
         filter(Metric == input$metricInput,
                Statistic == input$statInput,
                Species %in% c(input$mgrpInput),
                Cumulative == input$cumulInput,
-               State %in% c(input$regionInput))
+               State %in% c(input$regionInput),
+               Interval == input$wkInput)
     }
   })
   
   dt_dat <- reactive({
-    dat <- filtered_dt()
+    if(input$wkInput == 'Monthly') {
+    dat <- filtered_dt() %>%
+      mutate(LANDING_MONTH = month(LANDING_MONTH, label = T))
+    } else {
+      dat <- filtered_dt()
+    }
     tabformatfun <- function(x) {
       rounding <- case_when(
         any(dat$Value < 1) ~ 2, 
@@ -165,6 +180,16 @@ shinyServer(function(input, output, session) {
     return(dat)
   })
   
+  plot_dat <- reactive({
+    if(input$wkInput == 'Monthly') {
+      plot_dat <- filtered() %>%
+      mutate(LANDING_MONTH = month(LANDING_MONTH, label = T))
+    } else{
+      plot_dat <- filtered()
+    }
+    return(plot_dat)
+  })
+  
   lineColor <- c(
     '2014-2019' = 'lightgray',
     '2020' = 'blue',
@@ -175,11 +200,10 @@ shinyServer(function(input, output, session) {
   output$plot <- renderPlotly({
     if(is.null(filtered())){
       return()
-    }  else {
-      
+    } else {
           print(
       ggplotly(
-    ggplot(filtered(),
+    ggplot(plot_dat(),
            aes(x = LANDING_MONTH,
                y = Value,
                color = Type, 
@@ -193,7 +217,7 @@ shinyServer(function(input, output, session) {
             axis.title.y = element_text(size = 12)) +
       #scale_x_date(date_labels = '%b', date_minor_breaks = "1 month") +
       geom_line(aes(color = Type), size = 0.6) +
-      geom_point(aes(color = Type), size = 3) +
+      geom_point(aes(color = Type), size = 1.5) +
       facet_wrap(~ylab, scales = 'free_y', ncol = 2) +
       labs(y = paste(input$statInput, input$metricInput)),
     tooltip = 'Year',
