@@ -82,20 +82,16 @@ comp_dat_all_mtreated <- comp_dat_all_wk %>%
 comp_dat_full <- rbind(comp_dat_all_wk, comp_dat_all_mtreated)
 # Data analysis ####
 # Calculating mean rev/mt by species group, agency_code, and month
-comp_dat_avg <- filter(comp_dat_full, !is.na(VESSEL_NUM)) %>% # we need to remove NAs from averages
-  group_by(VESSEL_NUM, SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval) %>%
-  # Summarize with dealer_num removed #
-  summarize(Value = sum(Value)) %>%
-  group_by(SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval) %>%
-  summarize(Mean = mean(Value),
-            Median = median(Value),
-            Variance = sd(Value),
-            q25 = quantile(Value, prob =.25, type = 8, na.rm = T),
-            q75 = quantile(Value, prob =.75, type = 8, na.rm = T),
-            N = length(unique(VESSEL_NUM))) %>%
-  melt(c('SPECIES_GROUP','AGENCY_CODE', 'YEAR', 'LANDING_MONTH', 'Metric','Variance','q25','q75', 'CONF', 'N', 'Interval')) %>%
-  rename(Statistic = variable,
-         Value = value)
+comp_dat_dt <- data.table(comp_dat_full)
+comp_dat_dt <- comp_dat_dt[!is.na(VESSEL_NUM)]
+comp_dat_dt <- comp_dat_dt[, Value:=sum(Value), by=list(VESSEL_NUM, SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval)]
+comp_dat_avg <- comp_dat_dt[, c('Mean', 'Median', 'Variance', 'q25', 'q75', 'N') := 
+    list(mean(Value), median(Value), sd(Value), 
+      quantile(Value, prob =.25, type = 8, na.rm = T),
+      quantile(Value, prob =.75, type = 8, na.rm = T),
+      length(unique(VESSEL_NUM))), 
+  by=list(SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval)]
+
 # Calculating the total rev/mt by species group, agency_code, and month  
 comp_dat_tot_revlbs <- filter(comp_dat_full, Metric != 'price') %>%
   group_by(SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval) %>%
