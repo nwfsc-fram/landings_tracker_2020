@@ -183,22 +183,44 @@ cut35_dat <- rbind(cut35, cut35_crab, cut35_sardine) %>%
 comp_dat_final_cut <- rbind(comp_dat_final, cut35_dat) %>%
   mutate(Cumulative = 'N')
 
+
+# comp_dat_final_cumul <- subset(comp_dat_final_cut, Statistic == 'Total' 
+#                                & Metric %in% c('ROUND_WEIGHT_MTONS', 'EXVESSEL_REVENUE') 
+#                                & CONF == 'TREATED') %>%
+#   group_by(Species, State, Year, Metric, Statistic, Interval) %>%
+#   mutate(Value = cumsum(Value)) %>%
+#   mutate(Cumulative = 'Y') %>%
+#   data.frame() %>%
+#   rbind(comp_dat_final_cut) %>%
+#   mutate(rm_conf = case_when(Cumulative == 'Y' ~ 0,
+#                              Year == 'cut35' ~ 0,
+#                              Metric %in% c('Number of vessels', 'Number of buyers') ~ 0,
+#                              CONF == 'NOT_TREATED' ~ 1,
+#                              T ~ 0)) %>%
+#   filter(rm_conf != 1) %>%
+#   select(-rm_conf,-CONF) %>%
+#   ungroup()
+
+conftable <- rename(confidentiality$flag,
+  State = AGENCY_CODE,
+  Species = SPECIES_GROUP,
+  Year = YEAR) %>%
+  mutate(Year = as.character(Year))
+
 comp_dat_final_cumul <- subset(comp_dat_final_cut, Statistic == 'Total' 
                                & Metric %in% c('ROUND_WEIGHT_MTONS', 'EXVESSEL_REVENUE') 
-                               & CONF == 'TREATED') %>%
+                               & CONF == 'NOT_TREATED') %>%
   group_by(Species, State, Year, Metric, Statistic, Interval) %>%
-  mutate(Value = cumsum(Value)) %>%
-  mutate(Cumulative = 'Y') %>%
+  mutate(Value = cumsum(Value),
+    Cumulative = 'Y') %>%
+  # join on the confidentiality table and suppress as needed
+  left_join(conftable) %>%
+  mutate(Value = ifelse(final == 'ok' | is.na(final), Value, NA)) %>%
+  mutate(CONF = 'TREATED') %>%
+  select(-final) %>%
   data.frame() %>%
-  rbind(comp_dat_final_cut) %>%
-  mutate(rm_conf = case_when(Cumulative == 'Y' ~ 0,
-                             Year == 'cut35' ~ 0,
-                             Metric %in% c('Number of vessels', 'Number of buyers') ~ 0,
-                             CONF == 'NOT_TREATED' ~ 1,
-                             T ~ 0)) %>%
-  filter(rm_conf != 1) %>%
-  select(-rm_conf,-CONF) %>%
-  ungroup()
+  rbind(comp_dat_final_cut) 
+
 
 all_combos <- comp_dat_final_cumul %>%
   select(Year, State, LANDING_MONTH, Statistic, Metric, Cumulative, Interval) %>%
