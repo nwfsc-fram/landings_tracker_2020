@@ -50,14 +50,14 @@ comp_dat_sub <- filter(comp_dat_fmt#, DAYOFYEAR <= max_2020
   select(-DEFL)
 
 # Add agency_code = 'All' option for no state grouping
-comp_dat_all <- comp_dat_sub %>%
-  mutate(AGENCY_CODE = 'All') %>%
+comp_dat_all <- mutate(comp_dat_sub, AGENCY_CODE = 'All') %>%
   rbind(comp_dat_sub) %>%
   # summarizing by month
   group_by(YEAR, VESSEL_NUM, DEALER_NUM, SPECIES_GROUP, LANDING_MONTH, AGENCY_CODE, Metric) %>%
   summarize(Value = sum(Value)) %>%
   mutate(CONF = 'NOT_TREATED') %>%
-  data.frame()
+  data.frame() %>%
+  rename(date = LANDING_MONTH)
 
 # Add in weekly data 
 comp_dat_all_wk <- comp_dat_sub %>%
@@ -65,37 +65,47 @@ comp_dat_all_wk <- comp_dat_sub %>%
   rbind(comp_dat_sub) %>%
   # Summarizing by week
   group_by(YEAR, VESSEL_NUM, DEALER_NUM, SPECIES_GROUP, WEEKOFYEAR, AGENCY_CODE, Metric) %>%
+  rename(date = WEEKOFYEAR) %>%
   summarize(Value = sum(Value)) %>%
   mutate(CONF = 'NOT_TREATED',
          Interval = 'Weekly') %>%
-  rename(LANDING_MONTH = WEEKOFYEAR) %>%
   data.frame() %>%
   rbind(comp_dat_all %>%
           mutate(Interval = 'Monthly'))
 
+start_time <- Sys.time()
 comp_dat_all_mtreated <- comp_dat_all_wk %>%
-  PreTreat(c('YEAR','SPECIES_GROUP','LANDING_MONTH','AGENCY_CODE','Metric', 'Interval'),
+  PreTreat(c('YEAR','SPECIES_GROUP','date','AGENCY_CODE','Metric', 'Interval'),
            valvar = 'Value', confunit = c('VESSEL_NUM','DEALER_NUM'), zeroNAtreatment = 'asis') %>%
   mutate(CONF = 'TREATED') %>%
   select(-Valueorig)
+end_time <- Sys.time()
+
+end_time - start_time
+
+start_time <- Sys.time()
+comp_dat_all_mtreated <- comp_dat_all_wk %>%
+  confTreat(c('YEAR','SPECIES_GROUP','date','AGENCY_CODE','Metric', 'Interval'),
+           valvar = 'Value', confunit = c('VESSEL_NUM','DEALER_NUM')) %>%
+  mutate(CONF = 'TREATED') %>%
+  select(-Valueorig)
+end_time <- Sys.time()
+
+end_time - start_time
+
 
 comp_dat_full <- rbind(comp_dat_all_wk, comp_dat_all_mtreated)
 # Data analysis ####
 # Calculating mean rev/mt by species group, agency_code, and month
 comp_dat_dt <- data.table(comp_dat_full)
 comp_dat_dt <- comp_dat_dt[!is.na(VESSEL_NUM)]
-comp_dat_dt <- comp_dat_dt[, .(Value=sum(Value)), by=list(VESSEL_NUM, SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval)]
-comp_dat_avg <- comp_dat_dt[, .(Mean = mean(Value), 
-                                Median = median(Value), 
-                                Variance = sd(Value), 
-                                q25 = quantile(Value, prob =.25, type = 8, na.rm = T),
-                                q75 = quantile(Value, prob =.75, type = 8, na.rm = T),
-                                N = length(unique(VESSEL_NUM))), 
-  by=.(SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval)] %>%
-  melt(c('SPECIES_GROUP','AGENCY_CODE', 'YEAR', 'LANDING_MONTH', 'Metric','Variance','q25','q75', 'CONF', 'N', 'Interval')) %>%
-  rename(Statistic = variable,
-         Value = value) %>%
-  data.frame()
+comp_dat_dt <- comp_dat_dt[, Value:=sum(Value), by=list(VESSEL_NUM, SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval)]
+comp_dat_avg <- comp_dat_dt[, c('Mean', 'Median', 'Variance', 'q25', 'q75', 'N') := 
+    list(mean(Value), median(Value), sd(Value), 
+      quantile(Value, prob =.25, type = 8, na.rm = T),
+      quantile(Value, prob =.75, type = 8, na.rm = T),
+      length(unique(VESSEL_NUM))), 
+  by=list(SPECIES_GROUP, AGENCY_CODE, YEAR, LANDING_MONTH, Metric, CONF, Interval)]
 
 # Calculating the total rev/mt by species group, agency_code, and month  
 comp_dat_tot_revlbs <- filter(comp_dat_full, Metric != 'price') %>%
