@@ -24,6 +24,7 @@ shinyUI(fluidPage(
                                                       uiOutput("mgrpInput"),
                                                       uiOutput("statInput"),
                                                       uiOutput("cumulInput"),
+                                                      uiOutput("wkInput"),
                                                       uiOutput("activeInput"))
                           ),
                         mainPanel(
