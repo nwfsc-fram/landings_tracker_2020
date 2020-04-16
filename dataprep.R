@@ -219,7 +219,14 @@ comp_dat_final_cumul <- subset(comp_dat_final_cut, Statistic == 'Total'
   mutate(CONF = 'TREATED') %>%
   select(-final) %>%
   data.frame() %>%
-  rbind(comp_dat_final_cut) 
+  rbind(comp_dat_final_cut) %>%
+  mutate(rm_conf = case_when(Cumulative == 'Y' ~ 0,
+                             Year == 'cut35' ~ 0,
+                             Metric %in% c('Number of vessels', 'Number of buyers') ~ 0,
+                             CONF == 'NOT_TREATED' ~ 1,
+                             T ~ 0)) %>%
+  filter(rm_conf != 1) %>%
+  select(-rm_conf,-CONF)
 
 
 all_combos <- comp_dat_final_cumul %>%
