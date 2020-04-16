@@ -144,7 +144,7 @@ shinyServer(function(input, output, session) {
   dt_dat <- reactive({
     if(input$wkInput == 'Monthly') {
     dat <- filtered_dt() %>%
-      mutate(LANDING_MONTH = month(LANDING_MONTH, label = T))
+      mutate(Date = format(LANDING_MONTH, "%B"))
     } else {
       dat <- filtered_dt()
     }
@@ -176,7 +176,7 @@ shinyServer(function(input, output, session) {
               Date                        = Date,
               Unit                         = unit)
     
-    alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH','Active')
+    alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH','Active', 'no_pts')
     dat <- select(dat, colnames(dat)[apply(dat, 2, function(x) sum(x != '' & x != ' NA' & !is.na(x) & x != 'NA') > 0 )], 
                   -alwaysexclude) 
     
