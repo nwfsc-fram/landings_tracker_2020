@@ -339,6 +339,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
                       Statistic == 'Median' ~ q25,
                       Statistic == 'Total' ~ Value),
     Type = ifelse(Type == 'cut35', '35% threshold', Type),
+    Type = factor(Type, levels = c('2014-2019', '35% threshold', '2020')),
     # This is for the "active slider" which may not be needed after April.
     Active = case_when(Species %in% c('Non-whiting groundfish (IFQ)',
                                       'Non-whiting groundfish (non-IFQ)',
