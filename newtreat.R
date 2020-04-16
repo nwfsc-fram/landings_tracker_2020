@@ -25,7 +25,7 @@ confTreat <- function(x,
   finalvalname = valvar,
   use3 = TRUE,
   use90 = TRUE,
-  aggregate = FALSE) {
+  aggregate = FALSE,
   inclorig = FALSE) {
   # warnings
   try(if (!zeroNAtrt %in% c('zeroasNA', 'NAaszero', 'asis'))
@@ -109,28 +109,56 @@ confTreat <- function(x,
     )
     
   }
-    
-    flagtable <- flagtable_int[, .(final = case_when(any(value == 'suppress') ~ 'suppress', T ~ 'ok' )), by = mget(variables)]
+    flagtable <- flagtable_red[, .(final = case_when(any(value == 'suppress') ~ 'suppress', T ~ 'ok' )), by = mget(variables)]
   
   # implement the confidential data suppression of data
   final_data <- dat[flagtable, on = variables][,newvals := ifelse(final == 'suppress', NA, aggvals)][,final:=NULL]
   
   if(inclorig == F) final_data[,aggvals:=NULL]
+  
   # rename columns accordig to function inputs
   setnames(final_data, 'aggvals', paste0(valvar, "orig"), skip_absent = TRUE)
   setnames(final_data, 'newvals', valvar)
   
-  # final data frame
-  return(data.frame(final))
+  if(whichtables == 'datatable') {
+    
+    return(data.frame(final_data))
+    
+  } else if (whichtables == 'flagtable') {
+    
+    return(data.frame(flagtable))
+    
+  } else {
+    
+    bothtables <- list(data.frame(final_data), data.frame(flagtable))
+    
+    names(bothtables) <- c('data', 'flags')
+    
+    return(bothtables)
+    
+  }
   
   
 }
+# # 
+# both <- confTreat(
+#   xchk,
+#   variables = c('YEAR', 'shortdescr'),
+#   valvar = 'D_NUMBER_RESPONSE',
+#   confunit = c('VESSEL_ID', 'BUYER_ID')
+# )
 # 
-confTreat(
-  xchk,
-  variables = c('YEAR', 'shortdescr'),
-  valvar = 'D_NUMBER_RESPONSE',
-  confunit = c('VESSEL_ID', 'BUYER_ID')
-)
+# table(is.na(both$D_NUMBER_RESPONSE))
+
+# no3 <- confTreat(
+#   xchk,
+#   variables = c('YEAR', 'shortdescr'),
+#   valvar = 'D_NUMBER_RESPONSE',
+#   confunit = c('VESSEL_ID', 'BUYER_ID'),
+#   use90 = FALSE
+# )
+# 
+# table(is.na(no3$D_NUMBER_RESPONSE))
+
 
 #dtdat <- data.table(xchk)
