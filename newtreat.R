@@ -26,6 +26,7 @@ confTreat <- function(x,
   use3 = TRUE,
   use90 = TRUE,
   aggregate = FALSE) {
+  inclorig = FALSE) {
   # warnings
   try(if (!zeroNAtrt %in% c('zeroasNA', 'NAaszero', 'asis'))
     stop(
@@ -112,11 +113,12 @@ confTreat <- function(x,
     flagtable <- flagtable_int[, .(final = case_when(any(value == 'suppress') ~ 'suppress', T ~ 'ok' )), by = mget(variables)]
   
   # implement the confidential data suppression of data
-  final <- dat[flagtable, on = variables][,newvals := ifelse(final == 'suppress', NA, aggvals)][,final:=NULL]
+  final_data <- dat[flagtable, on = variables][,newvals := ifelse(final == 'suppress', NA, aggvals)][,final:=NULL]
   
+  if(inclorig == F) final_data[,aggvals:=NULL]
   # rename columns accordig to function inputs
-  setnames(final, 'aggvals', paste0(valvar, "orig"))
-  setnames(final, 'newvals', valvar)
+  setnames(final_data, 'aggvals', paste0(valvar, "orig"), skip_absent = TRUE)
+  setnames(final_data, 'newvals', valvar)
   
   # final data frame
   return(data.frame(final))
