@@ -87,12 +87,29 @@ confTreat <- function(x,
     flagtable_int <- rbind(aggdat, flagtable_int)
 
   }
-  
+
   # combine the flags for all levels of confunit and reevaluate 
-  flagtable <- flagtable_int[, .(final = case_when(
-    use3 == TRUE & use90 == TRUE & any(value == 'suppress') ~ 'suppress',
-    T ~ 'ok'
-  )), by = mget(variables)]
+  if( use3 == TRUE & use90 == TRUE) {
+    
+    flagtable_red <- flagtable_int
+    
+  } else if(use3 == TRUE & use90 == FALSE) {
+    
+    flagtable_red <- flagtable_int[variable == 'rule3']
+    
+  } else if(use3 == FALSE & use90 == TRUE) {
+    
+    flagtable_red <- flagtable_int[variable == 'rule90']
+    
+  } else {
+    
+    stop(
+      "Both use3 and use90 are set to FALSE, no confidentiality checking will be performed, please set at least one to TRUE"
+    )
+    
+  }
+    
+    flagtable <- flagtable_int[, .(final = case_when(any(value == 'suppress') ~ 'suppress', T ~ 'ok' )), by = mget(variables)]
   
   # implement the confidential data suppression of data
   final <- dat[flagtable, on = variables][,newvals := ifelse(final == 'suppress', NA, aggvals)][,final:=NULL]
@@ -107,11 +124,11 @@ confTreat <- function(x,
   
 }
 # 
-# confTreat(
-#   xchk,
-#   variables = c('YEAR', 'shortdescr'),
-#   valvar = 'D_NUMBER_RESPONSE',
-#   confunit = c('VESSEL_ID', 'BUYER_ID')
-# )
+confTreat(
+  xchk,
+  variables = c('YEAR', 'shortdescr'),
+  valvar = 'D_NUMBER_RESPONSE',
+  confunit = c('VESSEL_ID', 'BUYER_ID')
+)
 
 #dtdat <- data.table(xchk)
