@@ -206,7 +206,8 @@ shinyServer(function(input, output, session) {
             axis.title.x = element_blank(),
             axis.title.y = element_text(size = 12)) +
       scale_x_date(date_labels = '%b', date_breaks = "1 month") +
-      geom_line(aes(color = Type), size = 0.6) +
+      geom_line(data = filter(filtered(), !is.na(Value) & Type != '2014-2019'), linetype = 'dotted') +
+      geom_line(mapping = aes(color = Type), size = 0.6) +
       geom_point(data = filter(filtered(), Type != '2014-2019'),
                  mapping = aes(color = Type), size = 1.5) +
       facet_wrap(~ylab, scales = 'free_y', ncol = 2) +
