@@ -8,7 +8,10 @@ library(plotly)
 library(shinyWidgets)
 
 
-comp_dat_covid_app <- readRDS("comp_dat_covidapp.RDS")
+comp_dat_covid_app <- readRDS("comp_dat_covidapp.RDS") %>%
+  mutate(no_pts = case_when(Type == '2014-2019' ~ 1,
+                            Cumulative == 'Y' & Interval == 'Weekly' & Type == '35% threshold' ~ 1,
+                            T ~ 0))
 
 # Data formatting for plot ####
 data <- comp_dat_covid_app 
@@ -208,7 +211,7 @@ shinyServer(function(input, output, session) {
       scale_x_date(date_labels = '%b', date_breaks = "1 month") +
       geom_line(data = filter(filtered(), !is.na(Value) & Type != '2014-2019'), linetype = 'dotted') +
       geom_line(mapping = aes(color = Type), size = 0.6) +
-      geom_point(data = filter(filtered(), Type != '2014-2019'),
+      geom_point(data = filter(filtered(), no_pts == 0),
                  mapping = aes(color = Type), size = 1.5) +
       facet_wrap(~ylab, scales = 'free_y', ncol = 2) +
       labs(y = paste(input$statInput, input$metricInput)),
