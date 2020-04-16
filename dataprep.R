@@ -5,6 +5,8 @@ library(lubridate)
 library(EDCReport)
 library(tidyr)
 
+source("confTreat.R")
+
 # Set landing month cutoff for 2020; as of 4/7/2020 we only want to include 2020 data through March
 m_cutoff <- 3
 w_cutoff <- 13
@@ -73,13 +75,16 @@ comp_dat_all_wk <- comp_dat_sub %>%
   rbind(comp_dat_all %>%
           mutate(Interval = 'Monthly'))
 
-comp_dat_all_mtreated <- comp_dat_all_wk %>%
-  PreTreat(c('YEAR','SPECIES_GROUP','LANDING_MONTH','AGENCY_CODE','Metric', 'Interval'),
-           valvar = 'Value', confunit = c('VESSEL_NUM','DEALER_NUM'), zeroNAtreatment = 'asis') %>%
-  mutate(CONF = 'TREATED') %>%
-  select(-Valueorig)
+# run the confidentiality checks and suppress fields as necessary in the raw data
+confidentiality <- confTreat(comp_dat_all_wk, c('YEAR','SPECIES_GROUP','LANDING_MONTH','AGENCY_CODE','Metric', 'Interval'),
+           valvar = 'Value', confunit = c('VESSEL_NUM','DEALER_NUM'), whichtables = 'both')
 
+# save the treated data from confidentiality check
+comp_dat_all_mtreated <- mutate(confidentiality$data, CONF = 'TREATED')
+
+# dataframe with both the treated and untreated data
 comp_dat_full <- rbind(comp_dat_all_wk, comp_dat_all_mtreated)
+
 # Data analysis ####
 # Calculating mean rev/mt by species group, agency_code, and month
 comp_dat_dt <- data.table(comp_dat_full)
