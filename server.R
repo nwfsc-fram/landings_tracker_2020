@@ -73,7 +73,7 @@ shinyServer(function(input, output, session) {
   })
   # select state
   output$regionInput <- renderUI({
-    if(!input$mgrpInput %in% c('Whiting')) {
+    if(input$mgrpInput != 'Whiting') {
     checkboxGroupInput("regionInput", "State", choices = c('All states','California','Oregon','Washington'),
                        selected = c('All states'),
                        inline = T)
@@ -176,7 +176,8 @@ shinyServer(function(input, output, session) {
               Date                        = Date,
               Unit                         = unit)
     
-    alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH','Active', 'no_pts')
+    alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH','Active', 'no_pts',
+                       'Cumulative','Interval')
     dat <- select(dat, colnames(dat)[apply(dat, 2, function(x) sum(x != '' & x != ' NA' & !is.na(x) & x != 'NA') > 0 )], 
                   -alwaysexclude) 
     
