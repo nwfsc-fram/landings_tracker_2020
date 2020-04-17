@@ -95,6 +95,12 @@ shinyServer(function(input, output, session) {
     selectInput("metricInput", "Landings data", choices = unique(data$Metric), multiple = F,
                  selected = 'Exvessel revenue')
   })
+  
+  # Download button#####
+  output$download_Table <- renderUI({
+    tags$div(class = "actbutton",
+             downloadButton("dlTable", "Download Data Table", class = "btn btn-info"))
+  })
 
   
   filtered <- reactive({
@@ -243,4 +249,14 @@ shinyServer(function(input, output, session) {
       options = list(pageLength = 24)
       )
   })
+  
+  output$dlTable <- downloadHandler(
+    filename = function() { 'landings_tracker_2020.csv' },
+    content = function(file) {
+      table <- filtered_dt()
+      row.names(table) <- NULL
+      table$source <- ""
+      names(table)[names(table) == 'source'] <- "Sourced from the Landings Tracker 2020 application (http://dataexplorer.northwestscience.fisheries.noaa.gov/fisheye/landings_tracker/) maintained by NOAA Fisheriess NWFSC"
+      write.csv(table, file)
+    })
 })

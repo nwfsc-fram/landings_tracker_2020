@@ -25,7 +25,8 @@ shinyUI(fluidPage(
                                                       uiOutput("statInput"),
                                                       uiOutput("cumulInput"),
                                                       uiOutput("wkInput"),
-                                                      uiOutput("activeInput"))
+                                                      uiOutput("activeInput"),
+                                                      uiOutput("download_Table"))
                           ),
                         mainPanel(
                           tabsetPanel(type = "tabs",
