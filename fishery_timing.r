@@ -1,3 +1,12 @@
+# This script pulls data and formats the dataframe for use in the app #
+library(dplyr)
+library(reshape2)
+library(lubridate)
+library(EDCReport)
+library(tidyr)
+library(ggplot2)
+library(viridis)
+
 comp_dat_covid_app <- readRDS("comp_dat_covidapp.RDS") 
 
 dat <- subset(comp_dat_covid_app,
