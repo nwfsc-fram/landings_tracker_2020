@@ -26,8 +26,13 @@ saveRDS(alldat, "completenessdata.rds")
 
 addl <- alldat %>%
   ungroup() %>%
-  group_by(source, AGENCY_CODE, SPECIES_GROUP) %>%
+  group_by(source, AGENCY_CODE) %>%
   mutate(cumREV = cumsum(REV),
-    cumMTS = cumsum(MTS))
+    cumMTS = cumsum(MTS)) %>%
+  mutate(pull_date = ymd(gsub('.RDS', '', gsub('comp_dat_raw', '', source))))
 
-ggplot(addl, aes(x = LANDING_DATE, y = cumMTS)) + geom_line(aes(color = source)) + facet_wrap(~AGENCY_CODE)
+ggplot(subset(addl, LANDING_DATE > ymd('2020-03-14')), aes(x = LANDING_DATE, y = cumMTS)) + 
+  geom_line(aes(color = source)) + 
+  facet_grid(AGENCY_CODE ~ ., scales = 'free_y')
+
+    
