@@ -180,6 +180,51 @@ cut35_dat <- rbind(cut35, cut35_crab, cut35_sardine) %>%
          Variance = NA_real_,
          N = "")
 
+# baseline comparison
+34,368,301.92
+127,000,000
+cutoff_2020 <- subset(comp_dat_final, Year == 2020) %>%
+  group_by(Interval) %>%
+  summarize(LANDING_MONTH = max(LANDING_MONTH))
+
+only_2020 <- filter(comp_dat_final, 
+  # pull the untreated values
+  CONF == 'NOT_TREATED' &
+  Metric == 'EXVESSEL_REVENUE' & 
+  Statistic == 'Total' &
+  Year == '2020' &
+  Interval == 'Weekly') %>%
+  group_by(Species, State) %>%
+  mutate(cumREV_2020 = cumsum(Value)) %>%
+  right_join(cutoff_2020) %>%
+  select(Species, State, cumREV_2020)  %>%
+  subset(!is.na(Species))
+
+baseline <- filter(comp_dat_final, 
+  # take care of crab disaster
+  !(Year %in% c(2015, 2016) & grepl('CRAB', Species)) &
+  # take care of sardine disasters
+  !(Year %in% c(2015, 2016, 2017, 2018, 2019) & Species == 'SARDINE')  &
+  # pull the untreated values
+  CONF == 'NOT_TREATED' &
+  Metric == 'EXVESSEL_REVENUE' & 
+  Statistic == 'Total' &
+  Year != '2020' &
+  Interval == 'Weekly' &
+  !is.na(Metric)) %>%
+  group_by(Species, State, Year) %>%
+  mutate(cumREV = cumsum(Value)) %>%
+  right_join(cutoff_2020) %>%
+  group_by(Species, State) %>%
+  summarise(cumREV_hist = median(cumREV))%>%
+  subset(!is.na(Species))
+
+baseline_2020 <- full_join(only_2020, baseline) %>%
+  mutate(percchange = (cumREV_2020-cumREV_hist)/cumREV_hist*100) %>%
+  mutate(percdiff = percdiff(cumREV_hist, cumREV_2020))
+  
+    
+# all data including the 35% cutoff data
 comp_dat_final_cut <- rbind(comp_dat_final, cut35_dat) %>%
   mutate(Cumulative = 'N')
 
