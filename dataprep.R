@@ -251,39 +251,39 @@ comp_dat_final_cumul_0s <- merge(all_combos, comp_dat_final_cumul, all.x = T)
 # add filter for fisheries
 # proportion within state
 
-sharewithinstate <- subset(comp_dat_covid_app,
-  Statistic == 'Total' &
-    Metric == 'Exvessel revenue' & 
-    Cumulative == 'N' &
-    Interval == 'Monthly' &
-    Type == '2014-2019') %>%
-  group_by(State, Species) %>%
+sharewithinstate <- subset(comp_dat_all,
+    Metric == 'EXVESSEL_REVENUE' & 
+    YEAR %in% 2014:2019) %>%
+  group_by(AGENCY_CODE, SPECIES_GROUP) %>%
   summarize(Value = sum(Value, na.rm = T)) %>%
   ungroup() %>%
-  group_by(State) %>%
+  group_by(AGENCY_CODE) %>%
   mutate(fishery_prop = Value/sum(Value, na.rm = T))
 
-sharewithinmonth <- subset(comp_dat_covid_app,
-  Statistic == 'Total' &
-    Metric == 'Exvessel revenue' & 
-    Cumulative == 'N' &
-    Interval == 'Monthly' &
-    Type == '2014-2019') %>%
-  group_by(State, Species, LANDING_MONTH) %>%
+sharewithinmonth <- subset(comp_dat_all,
+    Metric == 'EXVESSEL_REVENUE' & 
+    YEAR %in% 2014:2019) %>%
+  group_by(AGENCY_CODE, SPECIES_GROUP, LANDING_MONTH) %>%
   summarize(Value = sum(Value, na.rm = T)) %>%
   ungroup() %>%
-  group_by(State, Species) %>%
+  group_by(AGENCY_CODE, SPECIES_GROUP) %>%
   mutate(fishery_prop = Value/sum(Value, na.rm = T)) %>%
-  mutate(month = month.abb[month(LANDING_MONTH)]) %>%
-  reshape2::dcast(State + Species ~ month, value.var = 'fishery_prop', fill = 0)
+  mutate(month = factor(month.abb[LANDING_MONTH], levels = month.abb)) %>%
+  reshape2::dcast(AGENCY_CODE + SPECIES_GROUP ~ month, value.var = 'fishery_prop', fill = 0)
 
-addlfilters <- full_join(sharewithinstate, sharewithinmonth)
+addlfilters <- full_join(sharewithinstate, sharewithinmonth) %>%
+  rename(Species = SPECIES_GROUP,
+    State = AGENCY_CODE) %>%
+  select(-Value) %>%
+  data.frame()
+    
 
 
 # share in current month
 
 # Final formatting ####
 app_data <-  comp_dat_final_cumul_0s %>%
+  left_join(addlfilters) %>%
   mutate(Metric = case_when(Metric == 'EXVESSEL_REVENUE' ~ 'Exvessel revenue',
                             Metric == 'ROUND_WEIGHT_MTONS' ~ 'Landed weight',
                             Metric == 'price' ~ 'Price (per lb)',
