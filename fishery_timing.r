@@ -20,8 +20,8 @@ dat_summ <- group_by(dat, State, Species, ylab, LANDING_MONTH) %>%
 subset(dat_summ, grepl('California', ylab)) %>%
 ggplot(aes(x = LANDING_MONTH, y = ylab)) +
   geom_segment(aes(x = LANDING_MONTH, y = ylab, 
-    xend = date_end, yend = ylab, #size = prop, 
-    color = prop), size = 2) +
+    xend = date_end, yend = ylab, 
+    color = prop, size = prop)) +
   scale_color_viridis() +
   scale_x_date(date_labels = '%b', date_breaks = "1 month") +
   ylab('') +
@@ -30,8 +30,8 @@ ggplot(aes(x = LANDING_MONTH, y = ylab)) +
 subset(dat_summ, grepl('Oregon', ylab)) %>%
 ggplot(aes(x = LANDING_MONTH, y = ylab)) +
   geom_segment(aes(x = LANDING_MONTH, y = ylab, 
-    xend = date_end, yend = ylab, #size = prop, 
-    color = prop), size = 2) +
+    xend = date_end, yend = ylab, size = prop, 
+    color = prop)) +
   scale_color_viridis() +
   scale_x_date(date_labels = '%b', date_breaks = "1 month") +
   ylab('') +
@@ -40,8 +40,8 @@ ggplot(aes(x = LANDING_MONTH, y = ylab)) +
 subset(dat_summ, grepl('Washington', ylab)) %>%
 ggplot(aes(x = LANDING_MONTH, y = ylab)) +
   geom_segment(aes(x = LANDING_MONTH, y = ylab, 
-    xend = date_end, yend = ylab, #size = prop, 
-    color = prop), size = 2) +
+    xend = date_end, yend = ylab, size = prop, 
+    color = prop)) +
   scale_color_viridis() +
   scale_x_date(date_labels = '%b', date_breaks = "1 month") +
   ylab('') +
