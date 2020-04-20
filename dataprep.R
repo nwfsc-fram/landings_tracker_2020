@@ -396,7 +396,6 @@ app_data <-  comp_dat_final_cumul_0s %>%
                               Interval == 'Monthly' ~ ymd(paste0('2001', LANDING_MONTH, '-01')))) %>%
   filter(rm != 1) %>%
   select(-rm) %>%
-  left_join(addlfilters) %>%
   data.frame() 
 
 saveRDS(app_data, "comp_dat_covidapp.RDS")
