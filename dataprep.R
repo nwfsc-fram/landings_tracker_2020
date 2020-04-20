@@ -248,6 +248,40 @@ all_combos <- comp_dat_final_cumul %>%
 # Add in 0s for clarity between suppressed v. no data. Without this step combinations with 0 don't show up at all. 
 comp_dat_final_cumul_0s <- merge(all_combos, comp_dat_final_cumul, all.x = T)
 
+# add filter for fisheries
+# proportion within state
+
+sharewithinstate <- subset(comp_dat_covid_app,
+  Statistic == 'Total' &
+    Metric == 'Exvessel revenue' & 
+    Cumulative == 'N' &
+    Interval == 'Monthly' &
+    Type == '2014-2019') %>%
+  group_by(State, Species) %>%
+  summarize(Value = sum(Value, na.rm = T)) %>%
+  ungroup() %>%
+  group_by(State) %>%
+  mutate(fishery_prop = Value/sum(Value, na.rm = T))
+
+sharewithinmonth <- subset(comp_dat_covid_app,
+  Statistic == 'Total' &
+    Metric == 'Exvessel revenue' & 
+    Cumulative == 'N' &
+    Interval == 'Monthly' &
+    Type == '2014-2019') %>%
+  group_by(State, Species, LANDING_MONTH) %>%
+  summarize(Value = sum(Value, na.rm = T)) %>%
+  ungroup() %>%
+  group_by(State, Species) %>%
+  mutate(fishery_prop = Value/sum(Value, na.rm = T)) %>%
+  mutate(month = month.abb[month(LANDING_MONTH)]) %>%
+  reshape2::dcast(State + Species ~ month, value.var = 'fishery_prop', fill = 0)
+
+addlfilters <- full_join(sharewithinstate, sharewithinmonth)
+
+
+# share in current month
+
 # Final formatting ####
 app_data <-  comp_dat_final_cumul_0s %>%
   mutate(Metric = case_when(Metric == 'EXVESSEL_REVENUE' ~ 'Exvessel revenue',
@@ -362,7 +396,8 @@ app_data <-  comp_dat_final_cumul_0s %>%
                               Interval == 'Monthly' ~ ymd(paste0('2001', LANDING_MONTH, '-01')))) %>%
   filter(rm != 1) %>%
   select(-rm) %>%
-  data.frame()
+  left_join(addlfilters) %>%
+  data.frame() 
 
 saveRDS(app_data, "comp_dat_covidapp.RDS")
 
