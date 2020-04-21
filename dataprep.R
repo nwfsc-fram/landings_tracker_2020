@@ -303,7 +303,8 @@ sharewithinstate <- subset(comp_dat_all,
   summarize(Value = sum(Value, na.rm = T)) %>%
   ungroup() %>%
   group_by(AGENCY_CODE) %>%
-  mutate(fishery_prop = Value/sum(Value, na.rm = T))
+  mutate(state_prop = Value/sum(Value, na.rm = T)) %>%
+  select(-Value)
 
 sharewithinmonth <- subset(comp_dat_all,
     Metric == 'EXVESSEL_REVENUE' & 
@@ -312,59 +313,29 @@ sharewithinmonth <- subset(comp_dat_all,
   summarize(Value = sum(Value, na.rm = T)) %>%
   ungroup() %>%
   group_by(AGENCY_CODE, SPECIES_GROUP) %>%
-  mutate(fishery_prop = Value/sum(Value, na.rm = T)) %>%
-  mutate(month = factor(month.abb[LANDING_MONTH], levels = month.abb)) %>%
-  reshape2::dcast(AGENCY_CODE + SPECIES_GROUP ~ month, value.var = 'fishery_prop', fill = 0)
+  mutate(month_prop = Value/sum(Value, na.rm = T)) %>%
+  mutate(select_month = factor(month.abb[LANDING_MONTH], levels = month.abb)) %>%
+  select(-LANDING_MONTH, -Value)
 
 addlfilters <- full_join(sharewithinstate, sharewithinmonth) %>%
   rename(Species = SPECIES_GROUP,
     State = AGENCY_CODE) %>%
-  select(-Value) %>%
   data.frame()
     
-
-
-# share in current month
-
 # Final formatting ####
 app_data <-  comp_dat_final_cumul_0s %>%
-  left_join(addlfilters) %>%
   mutate(Metric = case_when(Metric == 'EXVESSEL_REVENUE' ~ 'Exvessel revenue',
                             Metric == 'ROUND_WEIGHT_MTONS' ~ 'Landed weight',
                             Metric == 'price' ~ 'Price (per lb)',
                             T ~ as.character(Metric)),
-         Species = case_when(Species == 'OTHER COASTAL PELAGIC' ~ 'Other coastal pelagic',
-                             Species == 'ANCHOVY' ~ 'Anchovy',
-                             Species == 'SARDINE' ~ 'Sardine',
-                             Species == 'DUNGENESS CRAB' ~ 'Dungeness crab',
-                             Species == 'OTHER CRAB' ~ 'Other crab',
-                             Species == 'NON-WHITING GROUNDFISH NON-IFQ' ~ 'Non-whiting groundfish (non-IFQ)',
-                             Species == 'NON-WHITING GROUNDFISH IFQ' ~ 'Non-whiting groundfish (IFQ)',
-                             Species == 'TUNA' ~ 'Tuna',
-                             Species == 'OTHER' ~ 'Other species',
-                             Species == 'MARKET SQUID' ~ 'Market squid',
-                             Species == 'SALMON' ~ 'Salmon',
-                             Species == 'SHELLFISH' ~ 'Shellfish (incl. aquaculture)',
-                             Species == 'SHRIMP' ~ 'Shrimp',
-                             Species == 'WHITING' ~ 'Whiting',
-                             T ~ 'help'),
-         State = case_when(State == 'O' ~ 'Oregon',
-                           State == 'W' ~ 'Washington',
-                           State == 'C' ~ 'California',
-                           State %in% c('All') ~ 'All states',
-                           State %in% c('F') ~ 'At-sea',
-                           T ~ 'help'),
+         
          Type = ifelse(Year %in% 2014:2019, '2014-2019',
                        Year),
          # When we do the all combos merge if data is missing it shows up as NA.
          N = case_when(is.na(N) & Type != 'cut35' & Cumulative != 'Y' ~ 0,
                            T ~ as.numeric(N)),
          Value = case_when(N == 0 ~ 0,
-                       T ~ Value),
-         # decided to only present shellfish for Washington; not enough data to show other crab for OR/WA
-         rm = case_when(Species == 'Shellfish (incl. aquaculture)' & State != 'Washington' ~ 1,
-                        Species == 'Other crab' & State != 'California' ~ 1,
-                        T ~ 0)) %>%
+                       T ~ Value)) %>%
   group_by(Metric, Statistic, Cumulative, Interval) %>%
   mutate(unit = case_when(max(Value, na.rm = T) < 1e3 ~ '',
                           max(Value, na.rm = T) < 1e6 ~ 'thousands',
@@ -376,17 +347,18 @@ app_data <-  comp_dat_final_cumul_0s %>%
                          T ~ q25),
          q75 = case_when(Year != 2020 ~ NA_real_,
                          T ~ q75),
-         Year = as.factor(Year),
-         ylab = case_when(Metric %in% c('Exvessel revenue', 'Price (per lb)') ~
-                            paste0(State, ": ", Species, "\n(", unit, " 2019$)"),
-                          Metric == 'Landed weight' ~
-                            paste0(State, ": ", Species, "\n(", unit, " mt)"),
-                          Metric == 'Number of vessels' ~
-                            paste0(State, ": ", Species, "\n(", unit, ")"),
-                          T ~ paste(State, ": ", Species))
+         
     )  %>%
   ungroup() %>%
   mutate(
+    Year = as.factor(Year),
+    ylab = case_when(Metric %in% c('Exvessel revenue', 'Price (per lb)') ~
+                       paste0(State, ": ", Species, "\n(", unit, " 2019$)"),
+                     Metric == 'Landed weight' ~
+                       paste0(State, ": ", Species, "\n(", unit, " mt)"),
+                     Metric == 'Number of vessels' ~
+                       paste0(State, ": ", Species, "\n(", unit, ")"),
+                     T ~ paste(State, ": ", Species)),
     Value = case_when(
       unit == '' ~ Value,
       unit == 'thousands' ~ Value/1e3,
@@ -419,17 +391,6 @@ app_data <-  comp_dat_final_cumul_0s %>%
                       Statistic == 'Total' ~ Value),
     Type = ifelse(Type == 'cut35', '35% threshold', Type),
     Type = factor(Type, levels = c('2014-2019', '35% threshold', '2020')),
-    # This is for the "active slider" which may not be needed after April.
-    Active = case_when(Species %in% c('Non-whiting groundfish (IFQ)',
-                                      'Non-whiting groundfish (non-IFQ)',
-                                      'Dungeness crab',
-                                      'Other crab',
-                                      'Other species',
-                                      'Shellfish (incl. aquaculture)') ~ 'Y',
-                       Species %in% c('Sardine','Anchovy', 'Other coastal pelagic') & State == 'California' ~ 'Y',
-                       Species == 'Shrimp' & State == 'California' ~ 'Y',
-                       Species == 'Tuna' & State == 'California' ~ 'Y',
-                       T ~ 'N'),
     # Formatting the date so it can be plotted appropriately
     Date = case_when(Interval == 'Weekly' & LANDING_MONTH < 2 ~ as.Date(paste0(Year,'-01-01')),
                      Interval == 'Weekly' & LANDING_MONTH > 1 ~ as.Date(lubridate::parse_date_time(
@@ -439,6 +400,32 @@ app_data <-  comp_dat_final_cumul_0s %>%
                               Interval == 'Weekly' & LANDING_MONTH > 1 ~ as.Date(lubridate::parse_date_time(
                                 paste(2001, LANDING_MONTH, 'Sun', sep="/"),'Y/W/a')),
                               Interval == 'Monthly' ~ ymd(paste0('2001', LANDING_MONTH, '-01')))) %>%
+  left_join(addlfilters) %>%
+  mutate(Species = case_when(Species == 'OTHER COASTAL PELAGIC' ~ 'Other coastal pelagic',
+                             Species == 'ANCHOVY' ~ 'Anchovy',
+                             Species == 'SARDINE' ~ 'Sardine',
+                             Species == 'DUNGENESS CRAB' ~ 'Dungeness crab',
+                             Species == 'OTHER CRAB' ~ 'Other crab',
+                             Species == 'NON-WHITING GROUNDFISH NON-IFQ' ~ 'Non-whiting groundfish (non-IFQ)',
+                             Species == 'NON-WHITING GROUNDFISH IFQ' ~ 'Non-whiting groundfish (IFQ)',
+                             Species == 'TUNA' ~ 'Tuna',
+                             Species == 'OTHER' ~ 'Other species',
+                             Species == 'MARKET SQUID' ~ 'Market squid',
+                             Species == 'SALMON' ~ 'Salmon',
+                             Species == 'SHELLFISH' ~ 'Shellfish (incl. aquaculture)',
+                             Species == 'SHRIMP' ~ 'Shrimp',
+                             Species == 'WHITING' ~ 'Whiting',
+                             T ~ 'help'),
+         State = case_when(State == 'O' ~ 'Oregon',
+                           State == 'W' ~ 'Washington',
+                           State == 'C' ~ 'California',
+                           State %in% c('All') ~ 'All states',
+                           State %in% c('F') ~ 'At-sea',
+                           T ~ 'help'),
+         # decided to only present shellfish for Washington; not enough data to show other crab for OR/WA
+         rm = case_when(Species == 'Shellfish (incl. aquaculture)' & State != 'Washington' ~ 1,
+                        Species == 'Other crab' & State != 'California' ~ 1,
+                        T ~ 0)) %>%
   filter(rm != 1) %>%
   select(-rm) %>%
   data.frame() 
