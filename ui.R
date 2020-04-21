@@ -21,11 +21,13 @@ shinyUI(fluidPage(
                                      conditionalPanel(condition = "input.layoutInput == 'Interactive plots'",
                                                       uiOutput("metricInput"),
                                                       uiOutput("regionInput"),
+                                                      uiOutput("state_prop"),
                                                       uiOutput("mgrpInput"),
+                                                      uiOutput("month_select"),
+                                                      uiOutput("month_prop"),
                                                       uiOutput("statInput"),
                                                       uiOutput("cumulInput"),
                                                       uiOutput("wkInput"),
-                                                      uiOutput("activeInput"),
                                                       uiOutput("download_Table"))
                           ),
                         mainPanel(

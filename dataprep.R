@@ -304,7 +304,7 @@ sharewithinstate <- subset(comp_dat_all,
   summarize(Value = sum(Value, na.rm = T)) %>%
   ungroup() %>%
   group_by(AGENCY_CODE) %>%
-  mutate(state_prop = Value/sum(Value, na.rm = T)) %>%
+  mutate(state_prop = (Value/sum(Value, na.rm = T))*100) %>%
   select(-Value)
 
 sharewithinmonth <- subset(comp_dat_all,
@@ -314,7 +314,7 @@ sharewithinmonth <- subset(comp_dat_all,
   summarize(Value = sum(Value, na.rm = T)) %>%
   ungroup() %>%
   group_by(AGENCY_CODE, SPECIES_GROUP) %>%
-  mutate(month_prop = Value/sum(Value, na.rm = T)) %>%
+  mutate(month_prop = (Value/sum(Value, na.rm = T))*100) %>%
   mutate(select_month = factor(month.abb[LANDING_MONTH], levels = month.abb)) %>%
   select(-LANDING_MONTH, -Value)
 
@@ -353,13 +353,6 @@ app_data <-  comp_dat_final_cumul_0s %>%
   ungroup() %>%
   mutate(
     Year = as.factor(Year),
-    ylab = case_when(Metric %in% c('Exvessel revenue', 'Price (per lb)') ~
-                       paste0(State, ": ", Species, "\n(", unit, " 2019$)"),
-                     Metric == 'Landed weight' ~
-                       paste0(State, ": ", Species, "\n(", unit, " mt)"),
-                     Metric == 'Number of vessels' ~
-                       paste0(State, ": ", Species, "\n(", unit, ")"),
-                     T ~ paste(State, ": ", Species)),
     Value = case_when(
       unit == '' ~ Value,
       unit == 'thousands' ~ Value/1e3,
@@ -423,6 +416,13 @@ app_data <-  comp_dat_final_cumul_0s %>%
                            State %in% c('All') ~ 'All states',
                            State %in% c('F') ~ 'At-sea',
                            T ~ 'help'),
+         ylab = case_when(Metric %in% c('Exvessel revenue', 'Price (per lb)') ~
+                            paste0(State, ": ", Species, "\n(", unit, " 2019$)"),
+                          Metric == 'Landed weight' ~
+                            paste0(State, ": ", Species, "\n(", unit, " mt)"),
+                          Metric == 'Number of vessels' ~
+                            paste0(State, ": ", Species, "\n(", unit, ")"),
+                          T ~ paste(State, ": ", Species)),
          # decided to only present shellfish for Washington; not enough data to show other crab for OR/WA
          rm = case_when(Species == 'Shellfish (incl. aquaculture)' & State != 'Washington' ~ 1,
                         Species == 'Other crab' & State != 'California' ~ 1,

@@ -24,12 +24,7 @@ data_table <- comp_dat_covid_app %>%
          q25 = round(q25, 2),
          q75 = round(q75, 2)) %>%
   data.frame()
-data_table_active <- filter(comp_dat_covid_app, Active == 'Y') %>%
-  mutate(Value = round(Value, 2),
-         Variance = round(Variance, 2),
-         q25 = round(q25, 2),
-         q75 = round(q75, 2)) %>%
-  data.frame()
+
 
 ## SERVER part of the app.####
 # The server piece contains all reactive components.
@@ -42,12 +37,6 @@ shinyServer(function(input, output, session) {
     radioButtons("layoutInput","Output type", choices = c("Interactive plots", "Data summaries"),
                  selected = "Interactive plots", inline = T)
 
-  })
-  
-  # select active fisheries
-  output$activeInput <- renderUI({
-    sliderTextInput("activeInput", "Fisheries active Jan-Mar", choices = c('Active','All fisheries'),
-                    selected = 'All fisheries', width = '50%')
   })
   
   # Select levels or Cumulative
@@ -64,17 +53,13 @@ shinyServer(function(input, output, session) {
   
   # Select management group
   output$mgrpInput <- renderUI({
-    if(input$activeInput == 'All fisheries') {
     selectInput("mgrpInput", "Species groups", choices = unique(data$Species), multiple = T,
                        selected = c('Non-whiting groundfish (IFQ)'))
-    } else {
-      selectInput("mgrpInput", "Species groups", choices = unique(data_active$Species), multiple = T,
-                  selected = c('Non-whiting groundfish (IFQ)'))
-    }
   })
+  
   # select state
   output$regionInput <- renderUI({
-    if(input$mgrpInput != 'Whiting') {
+    if(!'Whiting' %in% input$mgrpInput) {
     checkboxGroupInput("regionInput", "State", choices = c('All states','California','Oregon','Washington'),
                        selected = c('All states'),
                        inline = T)
@@ -83,6 +68,12 @@ shinyServer(function(input, output, session) {
                          selected = c('All states'),
                          inline = T)
     }
+  })
+  
+  # select proportion of revenue by state
+  output$state_prop <- renderUI({
+    sliderInput("state_prop", label = "Filter by proportion of revenue by state",
+                min = 0, max = 100, value = c(0,100))
   })
   
   # Select a statistic
@@ -97,6 +88,18 @@ shinyServer(function(input, output, session) {
                  selected = 'Exvessel revenue')
   })
   
+  # Filter by proportion of revenue by month
+  output$month_select <- renderUI({
+    selectInput("month_select", "Filter by proportion of revenue by month", choices = unique(data$select_month),
+                multiple = F, selected = 'Mar')
+  })
+  
+  output$month_prop <- renderUI({
+    sliderInput("month_prop", label = "",
+                min = 0, max = 100, value = c(0,100))
+  })
+  
+  
   # Download button#####
   output$download_Table <- renderUI({
     tags$div(class = "actbutton",
@@ -105,47 +108,32 @@ shinyServer(function(input, output, session) {
 
   
   filtered <- reactive({
-    if(input$activeInput == 'All fisheries') {
     data %>%
       filter(Species %in% c(input$mgrpInput),
              Statistic == input$statInput,
              Metric == input$metricInput,
              Cumulative == input$cumulInput,
              State %in% c(input$regionInput),
-             Interval %in% c(input$wkInput)
+             Interval %in% c(input$wkInput),
+             select_month == input$month_select,
+             month_prop >= input$month_prop[1] & month_prop <= input$month_prop[2],
+             state_prop >= input$state_prop[1] & state_prop <= input$state_prop[2]
              ) 
-    } else {
-      data_active %>%
-        filter(Species %in% c(input$mgrpInput),
-               Statistic == input$statInput,
-               Metric == input$metricInput,
-               Cumulative == input$cumulInput,
-               State %in% c(input$regionInput),
-               Interval == input$wkInput
-        )
-    }
   })
   
   #creating the dataframe for data table#####
   ##Use reactive to reactively filter the dataframe based on inputs
   filtered_dt <- reactive({
-    if(input$activeInput == 'All fisheries') {
       data_table %>%
         filter(Metric == input$metricInput,
                Statistic == input$statInput,
                Species %in% c(input$mgrpInput),
                Cumulative == input$cumulInput,
                State %in% c(input$regionInput),
-               Interval == input$wkInput)
-    } else {
-      data_table_active %>%
-        filter(Metric == input$metricInput,
-               Statistic == input$statInput,
-               Species %in% c(input$mgrpInput),
-               Cumulative == input$cumulInput,
-               State %in% c(input$regionInput),
-               Interval == input$wkInput)
-    }
+               Interval == input$wkInput,
+               select_month == input$month_select,
+               month_prop >= input$month_prop[1] & month_prop <= input$month_prop[2],
+               state_prop >= input$state_prop[1] & state_prop <= input$state_prop[2])
   })
   
   dt_dat <- reactive({
@@ -183,7 +171,7 @@ shinyServer(function(input, output, session) {
               Date                        = Date,
               Unit                         = unit)
     
-    alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH','Active', 'no_pts',
+    alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH', 'no_pts',
                        'Cumulative','Interval')
     dat <- select(dat, colnames(dat)[apply(dat, 2, function(x) sum(x != '' & x != ' NA' & !is.na(x) & x != 'NA') > 0 )], 
                   -alwaysexclude) 
