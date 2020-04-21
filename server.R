@@ -6,16 +6,17 @@ library(dplyr)
 library(DT)
 library(plotly)
 library(shinyWidgets)
+library(fst)
 
 
-comp_dat_covid_app <- readRDS("comp_dat_covidapp.RDS") %>%
+comp_dat_covid_app <- read_fst("comp_dat_covidapp.fst") %>%
   mutate(no_pts = case_when(Type == '2014-2019' ~ 1,
                             Cumulative == 'Y' & Interval == 'Weekly' & Type == '35% threshold' ~ 1,
                             T ~ 0))
 
 # Data formatting for plot ####
 data <- comp_dat_covid_app 
-data_active <- filter(comp_dat_covid_app, Active == 'Y')
+
 # Data formatting for table#####
 data_table <- comp_dat_covid_app %>%
   mutate(Value = round(Value, 2),

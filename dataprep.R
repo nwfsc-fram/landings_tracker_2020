@@ -4,6 +4,7 @@ library(reshape2)
 library(lubridate)
 library(EDCReport)
 library(tidyr)
+library(fst)
 
 source("confTreat.R")
 
@@ -431,7 +432,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
   data.frame() 
 
 saveRDS(app_data, "comp_dat_covidapp.RDS")
-
+write.fst(app_data, "comp_dat_covidapp.fst")
 
 # numbers of years where 2020 is lower
 
