@@ -182,8 +182,6 @@ cut35_dat <- rbind(cut35, cut35_crab, cut35_sardine) %>%
          N = "")
 
 # baseline comparison
-34,368,301.92
-127,000,000
 cutoff_2020 <- subset(comp_dat_final, Year == 2020) %>%
   group_by(Interval) %>%
   summarize(LANDING_MONTH = max(LANDING_MONTH))
@@ -222,7 +220,9 @@ baseline <- filter(comp_dat_final,
 
 baseline_2020 <- full_join(only_2020, baseline) %>%
   mutate(percchange = (cumREV_2020-cumREV_hist)/cumREV_hist*100) %>%
-  mutate(percdiff = percdiff(cumREV_hist, cumREV_2020))
+  mutate(percdiff = percdiff(cumREV_hist, cumREV_2020)) %>%
+  select(-cumREV_2020, -cumREV_hist) %>%
+  data.table()
   
     
 # all data including the 35% cutoff data
@@ -321,6 +321,7 @@ sharewithinmonth <- subset(comp_dat_all,
 addlfilters <- full_join(sharewithinstate, sharewithinmonth) %>%
   rename(Species = SPECIES_GROUP,
     State = AGENCY_CODE) %>%
+  full_join(baseline_2020) %>%
   ungroup() %>%
   mutate(Species = case_when(Species == 'OTHER COASTAL PELAGIC' ~ 'Other coastal pelagic',
                              Species == 'ANCHOVY' ~ 'Anchovy',

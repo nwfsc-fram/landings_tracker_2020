@@ -13,16 +13,37 @@ comp_dat_covid_app <- read_fst("comp_dat_covidapp.fst") %>%
                             Cumulative == 'Y' & Interval == 'Weekly' & Type == '35% threshold' ~ 1,
                             T ~ 0))
 
+# split up the month and other filters befor joining to reduce size of df 
 addlfilters <- read_fst("addlfilters.fst")
+month_filter <- select(addlfilters, State, Species, month_prop, select_month)
+othr_filter <- select(addlfilters, -c(month_prop, select_month)) %>% distinct()
+
 state_max <- round(max(addlfilters$state_prop),0)
 month_max <- round(max(addlfilters$month_prop),0)
 
+perc_min <-  round(min(addlfilters$percchange, na.rm = T),0)
+perc_max <- round(max(addlfilters$percchange, na.rm = T),0)
+
 # Data formatting for plot ####
+# data with month filter
+data_m <- comp_dat_covid_app %>%
+  left_join(month_filter) %>%
+  data.frame()
+
+# data with other filters
 data <- comp_dat_covid_app %>%
-  left_join(addlfilters) %>%
+  left_join(othr_filter) %>%
   data.frame()
 
 # Data formatting for table#####
+# data with month filter
+data_table_m <- data_m %>%
+  mutate(Value = round(Value, 2),
+         Variance = round(Variance, 2),
+         q25 = round(q25, 2),
+         q75 = round(q75, 2)) %>%
+  data.frame()
+# data with other filter
 data_table <- data %>%
   mutate(Value = round(Value, 2),
          Variance = round(Variance, 2),
@@ -104,7 +125,7 @@ shinyServer(function(input, output, session) {
   # Input that applies to seasonality ####
   # Filter by proportion of revenue by month
   output$month_select <- renderUI({
-    selectInput("month_select", "", choices = unique(data$select_month),
+    selectInput("month_select", "", choices = unique(data_m$select_month),
                 multiple = F, selected = 'May')
   })
   
@@ -113,7 +134,11 @@ shinyServer(function(input, output, session) {
                 min = 0, max = month_max, value = c(20,month_max), step = 10)
   })
   
-  
+  # Input that applies to 2020 change ####
+  output$perc_change <- renderUI({
+    sliderInput("perc_change", label = "",
+                min = perc_min, max = perc_max, value = c(-20, 0), step = 20)
+  })
 # Reactive Data component ####
   filtered <- reactive({
     if(input$filter_ops == "Importance") {
@@ -129,14 +154,28 @@ shinyServer(function(input, output, session) {
         data.frame()
     }
     else if(input$filter_ops == "Seasonality") {
-      data %>%
+      data_m %>%
         subset(Statistic == input$statInput &
           Metric == input$metricInput &
           Cumulative == input$cumulInput &
           Interval == input$wkInput &
+          # get rid of the "All states"
+          State != 'All states' & 
           select_month == input$month_select &
           month_prop >= input$month_prop[1] &
           month_prop <= input$month_prop[2]
+        )
+    }
+    else if(input$filter_ops == '2020 change') {
+      data %>%
+        subset(Statistic == input$statInput &
+                 Metric == input$metricInput &
+                 Cumulative == input$cumulInput &
+                 Interval == input$wkInput &
+                 # get rid of the "All states"
+                 State != 'All states' & 
+                 percchange >= input$perc_change[1] &
+                 percchange <= input$perc_change[2]
         )
     }
     else if(input$filter_ops == "Custom output") {
@@ -155,35 +194,52 @@ shinyServer(function(input, output, session) {
   ##Use reactive to reactively filter the dataframe based on inputs
   filtered_dt <- reactive({
     if(input$filter_ops == "Importance") {
-    data_table %>%
-      filter(#Species %in% c(input$mgrpInput),
-        Statistic == input$statInput,
-        Metric == input$metricInput,
-        Cumulative == input$cumulInput,
-        Interval == input$wkInput,
-        State %in% c(input$state_select),
-        state_prop >= input$state_prop[1] & state_prop <= input$state_prop[2]
-      )
-  }
-  if(input$filter_ops == "Seasonality") {
-    data_table %>%
-      filter(Statistic == input$statInput,
-        Metric == input$metricInput,
-        Cumulative == input$cumulInput,
-        Interval == input$wkInput,
-        select_month == input$month_select,
-        month_prop >= input$month_prop[1] & month_prop <= input$month_prop[2])
-  }
-  if(input$filter_ops == "Custom output") {
-    data_table %>%
-      filter(Species %in% c(input$mgrpInput),
-             Statistic == input$statInput,
-             Metric == input$metricInput,
-             Cumulative == input$cumulInput,
-             Interval == input$wkInput,
-             State %in% c(input$regionInput)
-      )
-  }
+      data_table %>%
+        subset(Statistic == input$statInput &
+                 Metric == input$metricInput &
+                 Cumulative == input$cumulInput &
+                 Interval == input$wkInput &
+                 State %in% c(input$state_select) &
+                 state_prop >= input$state_prop[1] &
+                 state_prop <= input$state_prop[2]
+        ) %>%
+        data.frame()
+    }
+    else if(input$filter_ops == "Seasonality") {
+      data_table_m %>%
+        subset(Statistic == input$statInput &
+                 Metric == input$metricInput &
+                 Cumulative == input$cumulInput &
+                 Interval == input$wkInput &
+                 # get rid of the "All states"
+                 State != 'All states' & 
+                 select_month == input$month_select &
+                 month_prop >= input$month_prop[1] &
+                 month_prop <= input$month_prop[2]
+        )
+    }
+    else if(input$filter_ops == '2020 change') {
+      data_table %>%
+        subset(Statistic == input$statInput &
+                 Metric == input$metricInput &
+                 Cumulative == input$cumulInput &
+                 Interval == input$wkInput &
+                 # get rid of the "All states"
+                 State != 'All states' & 
+                 percchange >= input$perc_change[1] &
+                 percchange <= input$perc_change[2]
+        )
+    }
+    else if(input$filter_ops == "Custom output") {
+      data_table %>%
+        subset(Species %in% c(input$mgrpInput) &
+                 Statistic == input$statInput &
+                 Metric == input$metricInput &
+                 Cumulative == input$cumulInput &
+                 Interval == input$wkInput &
+                 State %in% c(input$regionInput)
+        )
+    }
   })
   
   dt_dat <- reactive({
@@ -240,9 +296,9 @@ shinyServer(function(input, output, session) {
   
   # Plot
   output$plot <- renderPlotly({
-    # if(is.null(filtered())){
-    #   return()
-    # } else {
+    if(is.null(filtered())){
+      return()
+    } else {
           print(
       ggplotly(
     ggplot(filtered(),
@@ -274,8 +330,7 @@ shinyServer(function(input, output, session) {
            margin = list(b = 50, l = 70)
            ))
       
-    #}
-    
+    }
   })
   
   output$datsmryPlot <- renderPlot({
