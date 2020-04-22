@@ -16,6 +16,7 @@ pacfin_dat_raw <- dbGetQuery(pacfin, "select landing_year,
                                       landing_month,
                                       landing_date,
                                       agency_code,
+                                      ticket_source_code,
                                       CASE WHEN
                                         management_group_code IN ('SHLL','SRMP') 
                                         THEN nvl(TO_CHAR(vessel_id),fisher_license_num)
@@ -80,6 +81,7 @@ pacfin_dat_raw <- dbGetQuery(pacfin, "select landing_year,
                                         landing_month,
                                         landing_date,
                                         agency_code,
+                                        ticket_source_code,
                                         CASE WHEN 
                                           management_group_code IN ('SHLL','SRMP') 
                                           THEN nvl(TO_CHAR(vessel_id),fisher_license_num)
@@ -225,7 +227,9 @@ norpac_dat_raw <- dbGetQuery(pacfin, "SELECT landing_year,
         mutate(LANDING_DATE = as.POSIXct(paste0(LANDING_YEAR, "-", LANDING_MONTH,"-", LANDING_DAY),"%Y-%m-%d")) %>%
         select(-LANDING_DAY)
 
-comp_dat_raw <- rbind(pacfin_dat_raw, norpac_dat_raw) %>%
+comp_dat_raw <- rbind(pacfin_dat_raw, 
+                      norpac_dat_raw %>%
+                        mutate(TICKET_SOURCE_CODE = NA_character_)) %>%
         data.frame()
 saveRDS(comp_dat_raw, paste0("comp_dat_raw", Sys.Date(), ".RDS"))
 
