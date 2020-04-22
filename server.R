@@ -5,24 +5,24 @@ library(ggplot2)
 library(DT)
 library(plotly)
 library(shinyWidgets)
-library(fst)
+#library(fst)
 library(dplyr)
 
-comp_dat_covid_app <- read_fst("comp_dat_covidapp.fst") %>%
+comp_dat_covid_app <- readRDS("comp_dat_covidapp.RDS") %>%
   mutate(no_pts = case_when(Type == '2014-2019' ~ 1,
                             Cumulative == 'Y' & Interval == 'Weekly' & Type == '35% threshold' ~ 1,
                             T ~ 0))
 
 # split up the month and other filters befor joining to reduce size of df 
-addlfilters <- read_fst("addlfilters.fst")
+addlfilters <- readRDS("addlfilters.RDS")
 month_filter <- select(addlfilters, State, Species, month_prop, select_month)
 othr_filter <- select(addlfilters, -c(month_prop, select_month)) %>% distinct()
 
-state_max <- round(max(addlfilters$state_prop),0)
-month_max <- round(max(addlfilters$month_prop),0)
+state_max <- ceiling(max(addlfilters$state_prop))
+month_max <- ceiling(max(addlfilters$month_prop))
 
-perc_min <-  round(min(addlfilters$percchange, na.rm = T),0)
-perc_max <- round(max(addlfilters$percchange, na.rm = T),0)
+perc_min <-  floor(min(addlfilters$percchange, na.rm = T))
+perc_max <- ceiling(max(addlfilters$percchange, na.rm = T))
 
 # Data formatting for plot ####
 # data with month filter

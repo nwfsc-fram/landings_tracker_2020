@@ -4,7 +4,7 @@ library(reshape2)
 library(lubridate)
 library(EDCReport)
 library(tidyr)
-library(fst)
+#library(fst)
 
 source("confTreat.R")
 
@@ -345,7 +345,7 @@ addlfilters <- full_join(sharewithinstate, sharewithinmonth) %>%
                            State %in% c('F') ~ 'At-sea',
                            T ~ 'help')) %>%
   data.frame()
-write.fst(addlfilters, "addlfilters.fst")
+saveRDS(addlfilters, "addlfilters.RDS")
 
 # Final formatting ####
 app_data <-  comp_dat_final_cumul_0s %>%
@@ -371,8 +371,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
          q25 = case_when(Year != 2020 ~ NA_real_, 
                          T ~ q25),
          q75 = case_when(Year != 2020 ~ NA_real_,
-                         T ~ q75),
-         
+                         T ~ q75)
     )  %>%
   ungroup() %>%
   mutate(
@@ -456,7 +455,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
   data.frame() 
 
 saveRDS(app_data, "comp_dat_covidapp.RDS")
-write.fst(app_data, "comp_dat_covidapp.fst")
+#write.fst(app_data, "comp_dat_covidapp.fst")
 
 # numbers of years where 2020 is lower
 
