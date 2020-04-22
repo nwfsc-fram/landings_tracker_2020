@@ -261,7 +261,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
                              Species == 'OTHER' ~ 'Other species',
                              Species == 'MARKET SQUID' ~ 'Market squid',
                              Species == 'SALMON' ~ 'Salmon',
-                             Species == 'SHELLFISH' ~ 'Shellfish (incl. aquaculture)',
+                             Species == 'SHELLFISH' ~ 'Shellfish',
                              Species == 'SHRIMP' ~ 'Shrimp',
                              Species == 'WHITING' ~ 'Whiting',
                              T ~ 'help'),
@@ -279,7 +279,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
          Value = case_when(N == 0 ~ 0,
                        T ~ Value),
          # decided to only present shellfish for Washington; not enough data to show other crab for OR/WA
-         rm = case_when(Species == 'Shellfish (incl. aquaculture)' & State != 'Washington' ~ 1,
+         rm = case_when(Species == 'Shellfish' & State != 'Washington' ~ 1,
                         Species == 'Other crab' & State != 'California' ~ 1,
                         T ~ 0)) %>%
   group_by(Metric, Statistic, Cumulative, Interval) %>%
@@ -342,7 +342,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
                                       'Dungeness crab',
                                       'Other crab',
                                       'Other species',
-                                      'Shellfish (incl. aquaculture)') ~ 'Y',
+                                      'Shellfish') ~ 'Y',
                        Species %in% c('Sardine','Anchovy', 'Other coastal pelagic') & State == 'California' ~ 'Y',
                        Species == 'Shrimp' & State == 'California' ~ 'Y',
                        Species == 'Tuna' & State == 'California' ~ 'Y',

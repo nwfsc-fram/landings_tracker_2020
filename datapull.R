@@ -66,7 +66,7 @@ pacfin_dat_raw <- dbGetQuery(pacfin, "select landing_year,
                                       SUM(exvessel_revenue) AS exvessel_revenue
                                       FROM comprehensive_ft
                                           WHERE
-                                          participation_group_code in ('C', 'A')
+                                          participation_group_code in ('C')
                             -- Excluding ETIX, only want hard data --
                                          -- AND is_etix_data = 'F'
                             -- Excluding Roe as in original script --
