@@ -2,8 +2,7 @@ tags$div(style = "margin: 15px 15px 30px; width: 60%",
          tags$div(
            h3("2020 Landings Tracker"),
            h4(em("weekly summary of West Coast commercial fisheries landings by species group and state")),
-           p("This app was designed to provide up-to-date information about fisheries landings 
-             during the COVID-19 crisis and shelter-in-place orders."),
+           p("This app was designed to provide up-to-date information about fisheries landings."),
            p("Data are obtained from PacFIN. Data are summarized by week and species group and 
              presented as vessel-level mean/median, fleet-wide totals or as cumulative totals."),
            h4("Data details"),
