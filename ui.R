@@ -46,9 +46,9 @@ shinyUI(fluidPage(
                                                                 DT::dataTableOutput("table")))
                           )
                         )
-                      )#,
-             # tabPanel("Information page",
-             #          source("info_page.R")$value)
+                      )),
+             tabPanel("Information page",
+                       source("info_page.R")$value)
   )
 )
-))
+)
