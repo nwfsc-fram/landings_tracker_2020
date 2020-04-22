@@ -2,23 +2,28 @@
 
 library(shiny)
 library(ggplot2)
-library(dplyr)
 library(DT)
 library(plotly)
 library(shinyWidgets)
 library(fst)
-
+library(dplyr)
 
 comp_dat_covid_app <- read_fst("comp_dat_covidapp.fst") %>%
   mutate(no_pts = case_when(Type == '2014-2019' ~ 1,
                             Cumulative == 'Y' & Interval == 'Weekly' & Type == '35% threshold' ~ 1,
                             T ~ 0))
 
+addlfilters <- read_fst("addlfilters.fst")
+state_max <- round(max(addlfilters$state_prop),0)
+month_max <- round(max(addlfilters$month_prop),0)
+
 # Data formatting for plot ####
-data <- comp_dat_covid_app 
+data <- comp_dat_covid_app %>%
+  left_join(addlfilters) %>%
+  data.frame()
 
 # Data formatting for table#####
-data_table <- comp_dat_covid_app %>%
+data_table <- data %>%
   mutate(Value = round(Value, 2),
          Variance = round(Variance, 2),
          q25 = round(q25, 2),
@@ -32,31 +37,44 @@ shinyServer(function(input, output, session) {
   ##Reactive component of the sidebar using renderUI and uiOutput functions####
   ##This allows us to update the sidebar based on other inputs##
   
+  # Input that applies to all ####
   # Select type of output
   output$layoutInput <- renderUI({
     radioButtons("layoutInput","Output type", choices = c("Interactive plots", "Data summaries"),
                  selected = "Interactive plots", inline = T)
-
   })
-  
   # Select levels or Cumulative
   output$cumulInput <- renderUI({
     sliderTextInput("cumulInput", "Cumulative", choices = c('Y', 'N'),
       selected = 'N', width = '25%')
   })
-  
   # Select weekly or monthly
   output$wkInput <- renderUI({
     sliderTextInput("wkInput", "Time interval", choices = c('Weekly', 'Monthly'),
                     selected = 'Monthly', width = '25%')
   })
+  # Select a statistic
+  output$statInput <- renderUI({
+    selectInput("statInput","Statistic", choices = unique(data$Statistic), multiple = F,
+                selected = "Total")
+  })
+  # Select landings in rev or lbs
+  output$metricInput <- renderUI({
+    selectInput("metricInput", "Landings data", choices = unique(data$Metric), multiple = F,
+                selected = 'Exvessel revenue')
+  })
+  # Download button#####
+  output$download_Table <- renderUI({
+    tags$div(class = "actbutton",
+             downloadButton("dlTable", "Download Data Table", class = "btn btn-info"))
+  })
   
+  # Input that applies to "custom input" ####
   # Select management group
   output$mgrpInput <- renderUI({
     selectInput("mgrpInput", "Species groups", choices = unique(data$Species), multiple = T,
                        selected = c('Non-whiting groundfish (IFQ)'))
   })
-  
   # select state
   output$regionInput <- renderUI({
     if(!'Whiting' %in% input$mgrpInput) {
@@ -70,73 +88,108 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  # Input that applies to "importance" ####
   # select proportion of revenue by state
+  output$state_select <- renderUI({
+      checkboxGroupInput("state_select", "", choices = unique(data$State),
+                         selected = c('Oregon'),
+                         inline = T)
+  })
   output$state_prop <- renderUI({
-    sliderInput("state_prop", label = "Filter by proportion of revenue by state",
-                min = 0, max = 100, value = c(0,100))
+    sliderInput("state_prop", label = "",
+                min = 0, max = state_max, value = c(10, state_max), step = 10)
   })
   
-  # Select a statistic
-  output$statInput <- renderUI({
-    selectInput("statInput","Statistic", choices = unique(data$Statistic), multiple = F,
-                 selected = "Total")
-  })
   
-  # Select landings in rev or lbs
-  output$metricInput <- renderUI({
-    selectInput("metricInput", "Landings data", choices = unique(data$Metric), multiple = F,
-                 selected = 'Exvessel revenue')
-  })
-  
+  # Input that applies to seasonality ####
   # Filter by proportion of revenue by month
   output$month_select <- renderUI({
-    selectInput("month_select", "Filter by proportion of revenue by month", choices = unique(data$select_month),
-                multiple = F, selected = 'Mar')
+    selectInput("month_select", "", choices = unique(data$select_month),
+                multiple = F, selected = 'May')
   })
   
   output$month_prop <- renderUI({
     sliderInput("month_prop", label = "",
-                min = 0, max = 100, value = c(0,100))
+                min = 0, max = month_max, value = c(20,month_max), step = 10)
   })
   
   
-  # Download button#####
-  output$download_Table <- renderUI({
-    tags$div(class = "actbutton",
-             downloadButton("dlTable", "Download Data Table", class = "btn btn-info"))
-  })
-
-  
+# Reactive Data component ####
   filtered <- reactive({
+    if(input$filter_ops == "Importance") {
     data %>%
-      filter(Species %in% c(input$mgrpInput),
-             Statistic == input$statInput,
-             Metric == input$metricInput,
-             Cumulative == input$cumulInput,
-             State %in% c(input$regionInput),
-             Interval %in% c(input$wkInput),
-             select_month == input$month_select,
-             month_prop >= input$month_prop[1] & month_prop <= input$month_prop[2],
-             state_prop >= input$state_prop[1] & state_prop <= input$state_prop[2]
-             ) 
+      subset(Statistic == input$statInput &
+             Metric == input$metricInput &
+             Cumulative == input$cumulInput &
+             Interval == input$wkInput &
+             State %in% c(input$state_select) &
+             state_prop >= input$state_prop[1] &
+             state_prop <= input$state_prop[2]
+             ) %>%
+        data.frame()
+    }
+    else if(input$filter_ops == "Seasonality") {
+      data %>%
+        subset(Statistic == input$statInput &
+          Metric == input$metricInput &
+          Cumulative == input$cumulInput &
+          Interval == input$wkInput &
+          select_month == input$month_select &
+          month_prop >= input$month_prop[1] &
+          month_prop <= input$month_prop[2]
+        )
+    }
+    else if(input$filter_ops == "Custom output") {
+      data %>%
+        subset(Species %in% c(input$mgrpInput) &
+          Statistic == input$statInput &
+          Metric == input$metricInput &
+          Cumulative == input$cumulInput &
+          Interval == input$wkInput &
+          State %in% c(input$regionInput)
+        )
+    }
   })
   
   #creating the dataframe for data table#####
   ##Use reactive to reactively filter the dataframe based on inputs
   filtered_dt <- reactive({
-      data_table %>%
-        filter(Metric == input$metricInput,
-               Statistic == input$statInput,
-               Species %in% c(input$mgrpInput),
-               Cumulative == input$cumulInput,
-               State %in% c(input$regionInput),
-               Interval == input$wkInput,
-               select_month == input$month_select,
-               month_prop >= input$month_prop[1] & month_prop <= input$month_prop[2],
-               state_prop >= input$state_prop[1] & state_prop <= input$state_prop[2])
+    if(input$filter_ops == "Importance") {
+    data_table %>%
+      filter(#Species %in% c(input$mgrpInput),
+        Statistic == input$statInput,
+        Metric == input$metricInput,
+        Cumulative == input$cumulInput,
+        Interval == input$wkInput,
+        State %in% c(input$state_select),
+        state_prop >= input$state_prop[1] & state_prop <= input$state_prop[2]
+      )
+  }
+  if(input$filter_ops == "Seasonality") {
+    data_table %>%
+      filter(Statistic == input$statInput,
+        Metric == input$metricInput,
+        Cumulative == input$cumulInput,
+        Interval == input$wkInput,
+        select_month == input$month_select,
+        month_prop >= input$month_prop[1] & month_prop <= input$month_prop[2])
+  }
+  if(input$filter_ops == "Custom output") {
+    data_table %>%
+      filter(Species %in% c(input$mgrpInput),
+             Statistic == input$statInput,
+             Metric == input$metricInput,
+             Cumulative == input$cumulInput,
+             Interval == input$wkInput,
+             State %in% c(input$regionInput)
+      )
+  }
   })
   
   dt_dat <- reactive({
+    if(is.null(filtered_dt())){
+      return()
+    }
     if(input$wkInput == 'Monthly') {
     dat <- filtered_dt() %>%
       mutate(Date = format(LANDING_MONTH, "%B"))
@@ -187,9 +240,9 @@ shinyServer(function(input, output, session) {
   
   # Plot
   output$plot <- renderPlotly({
-    if(is.null(filtered())){
-      return()
-    } else {
+    # if(is.null(filtered())){
+    #   return()
+    # } else {
           print(
       ggplotly(
     ggplot(filtered(),
@@ -221,7 +274,7 @@ shinyServer(function(input, output, session) {
            margin = list(b = 50, l = 70)
            ))
       
-    }
+    #}
     
   })
   

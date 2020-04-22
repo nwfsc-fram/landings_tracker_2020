@@ -321,8 +321,31 @@ sharewithinmonth <- subset(comp_dat_all,
 addlfilters <- full_join(sharewithinstate, sharewithinmonth) %>%
   rename(Species = SPECIES_GROUP,
     State = AGENCY_CODE) %>%
+  ungroup() %>%
+  mutate(Species = case_when(Species == 'OTHER COASTAL PELAGIC' ~ 'Other coastal pelagic',
+                             Species == 'ANCHOVY' ~ 'Anchovy',
+                             Species == 'SARDINE' ~ 'Sardine',
+                             Species == 'DUNGENESS CRAB' ~ 'Dungeness crab',
+                             Species == 'OTHER CRAB' ~ 'Other crab',
+                             Species == 'NON-WHITING GROUNDFISH NON-IFQ' ~ 'Non-whiting groundfish (non-IFQ)',
+                             Species == 'NON-WHITING GROUNDFISH IFQ' ~ 'Non-whiting groundfish (IFQ)',
+                             Species == 'TUNA' ~ 'Tuna',
+                             Species == 'OTHER' ~ 'Other species',
+                             Species == 'MARKET SQUID' ~ 'Market squid',
+                             Species == 'SALMON' ~ 'Salmon',
+                             Species == 'SHELLFISH' ~ 'Shellfish (incl. aquaculture)',
+                             Species == 'SHRIMP' ~ 'Shrimp',
+                             Species == 'WHITING' ~ 'Whiting',
+                             T ~ 'help'),
+         State = case_when(State == 'O' ~ 'Oregon',
+                           State == 'W' ~ 'Washington',
+                           State == 'C' ~ 'California',
+                           State %in% c('All') ~ 'All states',
+                           State %in% c('F') ~ 'At-sea',
+                           T ~ 'help')) %>%
   data.frame()
-    
+write.fst(addlfilters, "addlfilters.fst")
+
 # Final formatting ####
 app_data <-  comp_dat_final_cumul_0s %>%
   mutate(Metric = case_when(Metric == 'EXVESSEL_REVENUE' ~ 'Exvessel revenue',
@@ -394,7 +417,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
                               Interval == 'Weekly' & LANDING_MONTH > 1 ~ as.Date(lubridate::parse_date_time(
                                 paste(2001, LANDING_MONTH, 'Sun', sep="/"),'Y/W/a')),
                               Interval == 'Monthly' ~ ymd(paste0('2001', LANDING_MONTH, '-01')))) %>%
-  left_join(addlfilters) %>%
+  #left_join(addlfilters) %>%
   mutate(Species = case_when(Species == 'OTHER COASTAL PELAGIC' ~ 'Other coastal pelagic',
                              Species == 'ANCHOVY' ~ 'Anchovy',
                              Species == 'SARDINE' ~ 'Sardine',
