@@ -7,9 +7,10 @@ library(tidyr)
 
 source("confTreat.R")
 
-# Set landing month cutoff for 2020; as of 4/7/2020 we only want to include 2020 data through March
-m_cutoff <- 3
-w_cutoff <- 13
+# Set completeness cutoff at 14 days prior to today. All data after this date will be shown with uncertainty
+today <- Sys.Date()
+completeness_cutoff <- today - 14
+month_cutoff <- month(completeness_cutoff) - 1
 
 # Deflator #####
 # Currently coded to treat 2020 as 2019$
@@ -21,12 +22,7 @@ defl_adj <- rbind(defl, defl2020)
 
 # Load data from data_pull.R ####
 comp_dat_raw <- readRDS('comp_dat_raw.RDS') %>%
-  rename(YEAR = LANDING_YEAR) %>%
-  # filter out data that is past the month cutoff
-  mutate(rm = case_when(YEAR == 2020 & LANDING_MONTH > m_cutoff ~ 1,
-                        T ~ 0)) %>%
-  filter(rm != 1) %>%
-  select(-rm) 
+  rename(YEAR = LANDING_YEAR) 
 
 # Add in price metric and Remove outliers
 comp_dat_outadj <- comp_dat_raw %>%
@@ -37,10 +33,9 @@ comp_dat_outadj <- comp_dat_raw %>%
 # Adding date variables to use in data summaries
 comp_dat_fmt <- comp_dat_outadj %>%
   mutate(WEEKOFYEAR = as.numeric(format(LANDING_DATE, "%U")),
-         DAYOFYEAR = as.numeric(format(LANDING_DATE, "%j")))
+         DAYOFYEAR = as.numeric(format(LANDING_DATE, "%j"))) 
 
-comp_dat_sub <- filter(comp_dat_fmt#, DAYOFYEAR <= max_2020
-  ) %>%
+comp_dat_sub <- comp_dat_fmt %>%
   select( -LANDING_DATE, -DAYOFYEAR) %>%
   melt(c('VESSEL_NUM','DEALER_NUM','SPECIES_GROUP','YEAR','WEEKOFYEAR', 'LANDING_MONTH', 'AGENCY_CODE')) %>%
   rename(Metric = variable,
@@ -238,8 +233,9 @@ all_combos <- comp_dat_final_cumul %>%
   #group_by(Year, State, LANDING_MONTH, Statistic, Metric, Cumulative, Type, Interval, Species) %>%
   #distinct() %>%
   mutate(rm = case_when(Interval == 'Monthly' & (LANDING_MONTH > 12 | LANDING_MONTH < 1) ~ 1,
-                        Interval == 'Monthly' & LANDING_MONTH > m_cutoff & Year == 2020 ~ 1,
-                        Interval == 'Weekly' & LANDING_MONTH > w_cutoff & Year == 2020 ~ 1,
+                        Interval == 'Monthly' & LANDING_MONTH > month(completeness_cutoff) 
+                        & Year == 2020 ~ 1,
+                        Interval == 'Weekly' & LANDING_MONTH > week(today) & Year == 2020 ~ 1,
                         T ~ 0)) %>%
   filter(rm != 1) %>%
   select(-rm) 
@@ -359,7 +355,10 @@ app_data <-  comp_dat_final_cumul_0s %>%
     LANDING_MONTH = case_when(Interval == 'Weekly' & LANDING_MONTH < 2 ~ as.Date('2001-01-01'),
                               Interval == 'Weekly' & LANDING_MONTH > 1 ~ as.Date(lubridate::parse_date_time(
                                 paste(2001, LANDING_MONTH, 'Sun', sep="/"),'Y/W/a')),
-                              Interval == 'Monthly' ~ ymd(paste0('2001', LANDING_MONTH, '-01')))) %>%
+                              Interval == 'Monthly' ~ ymd(paste0('2001', LANDING_MONTH, '-01'))),
+    complete = case_when(Interval == 'Weekly' & Date >= completeness_cutoff ~ "uncertain",
+                         Interval == 'Monthly' & Year == 2020 & month(Date) > month_cutoff ~ "uncertain",
+                         T ~ "complete")) %>%
   filter(rm != 1) %>%
   select(-rm) %>%
   data.frame()

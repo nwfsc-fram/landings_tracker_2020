@@ -183,7 +183,7 @@ shinyServer(function(input, output, session) {
               Unit                         = unit)
     
     alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH','Active', 'no_pts',
-                       'Cumulative','Interval')
+                       'Cumulative','Interval', 'complete')
     dat <- select(dat, colnames(dat)[apply(dat, 2, function(x) sum(x != '' & x != ' NA' & !is.na(x) & x != 'NA') > 0 )], 
                   -alwaysexclude) 
     
@@ -218,10 +218,11 @@ shinyServer(function(input, output, session) {
       scale_x_date(date_labels = '%b', date_breaks = "1 month") +
       geom_line(data = filter(filtered(), Type == '2014-2019'), size = 0.6,
                 mapping = aes(color = Type)) +
-      geom_line(data = filter(filtered(), !is.na(Value) & Type != '2014-2019'), linetype = 'dotted') +
-      geom_line(data = filter(filtered(), Type != '2014-2019'),
+      geom_line(data = filter(filtered(), Year == 2020), linetype = 'dotted', color = "lightsteelblue") +
+      geom_line(data = filter(filtered(), !is.na(Value) & Type != '2014-2019' & complete != 'uncertain'), linetype = 'dashed') +
+      geom_line(data = filter(filtered(), Type != '2014-2019' & complete != 'uncertain'),
                 mapping = aes(color = Type), size = 0.6) +
-      geom_point(data = filter(filtered(), no_pts == 0),
+      geom_point(data = filter(filtered(), no_pts == 0 & complete != 'uncertain'),
                  mapping = aes(color = Type), size = 1.5) +
       facet_wrap(~ylab, scales = 'free_y', ncol = 2) +
       labs(y = paste(input$statInput, input$metricInput)),
