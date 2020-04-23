@@ -184,6 +184,7 @@ cut35_dat <- rbind(cut35, cut35_crab, cut35_sardine) %>%
 # baseline comparison
 cutoff_2020 <- subset(comp_dat_final, Year == 2020) %>%
   group_by(Interval) %>%
+  summarize(LANDING_MONTH = max(LANDING_MONTH))
 
 only_2020 <- filter(comp_dat_final, 
   # pull the untreated values
@@ -341,7 +342,8 @@ app_data <-  comp_dat_final_cumul_0s %>%
                             Metric == 'ROUND_WEIGHT_MTONS' ~ 'Landed weight',
                             Metric == 'price' ~ 'Price (per lb)',
                             T ~ as.character(Metric)),
-         
+         Species = convert_sp(Species),
+         State = convert_state(State),
          Type = ifelse(Year %in% 2014:2019, '2014-2019',
                        Year),
          # When we do the all combos merge if data is missing it shows up as NA.
@@ -388,6 +390,13 @@ app_data <-  comp_dat_final_cumul_0s %>%
       unit == 'millions' ~  q75/1e6,
       unit == 'billions' ~  q75/1e9,
       T ~ -999),
+    ylab = case_when(Metric %in% c('Exvessel revenue', 'Price (per lb)') ~
+                       paste0(State, ": ", Species, "\n(", unit, " 2019$)"),
+                     Metric == 'Landed weight' ~
+                       paste0(State, ": ", Species, "\n(", unit, " mt)"),
+                     Metric == 'Number of vessels' ~
+                       paste0(State, ": ", Species, "\n(", unit, ")"),
+                     T ~ paste(State, ": ", Species)),
     upper = case_when(Statistic == 'Mean' ~ Value + Variance,
                       Statistic == 'Median' ~ q75,
                       Statistic == 'Total' ~ Value),
@@ -407,11 +416,15 @@ app_data <-  comp_dat_final_cumul_0s %>%
                               Interval == 'Monthly' ~ ymd(paste0('2001', LANDING_MONTH, '-01'))),
     complete = case_when(Interval == 'Weekly' & Date >= completeness_cutoff ~ "uncertain",
                          Interval == 'Monthly' & Year == 2020 & month(Date) > month_cutoff ~ "uncertain",
-                         T ~ "complete")) %>%
+                         T ~ "complete"),
+    # decided to only present shellfish for Washington; not enough data to show other crab for OR/WA
+    rm = case_when(Species == 'Shellfish (excl aquaculture)' & State != 'Washington' ~ 1,
+                   Species == 'Other crab' & State != 'California' ~ 1,
+                   T ~ 0)) %>%
   filter(rm != 1) %>%
   select(-rm) %>%
   data.frame() 
-
+  
 saveRDS(app_data, "comp_dat_covidapp.RDS")
 #write.fst(app_data, "comp_dat_covidapp.fst")
 
