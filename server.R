@@ -28,12 +28,30 @@ perc_max <- ceiling(max(addlfilters$percchange, na.rm = T))
 # data with month filter
 data_m <- comp_dat_covid_app %>%
   left_join(month_filter) %>%
+  mutate(month_prop = case_when(is.na(month_prop) ~ NA_character_,
+                                month_prop <= 5 ~ '0-5%',
+                                month_prop > 5 & month_prop <= 10 ~ '> 5%, <= 10%',
+                                month_prop > 10 & month_prop <= 15 ~ '> 10%, <= 15%',
+                                month_prop > 15 & month_prop <= 20 ~ '> 15%, <= 20%',
+                                month_prop > 20 ~ '> 20%',
+                                T ~ 'help'))
   data.frame()
 
 # data with other filters
 data <- comp_dat_covid_app %>%
   left_join(othr_filter) %>%
-  data.frame()
+  mutate(percchange = case_when(is.na(percchange) ~ NA_character_,
+                                percchange <= -35 ~ '-35% or less',
+                                percchange > -35 & percchange <= 0 ~ '> -35%, <= 0%',
+                                percchange > 0 & percchange <= 35 ~ '> 0%, <= 35%',
+                                percchange > 35 ~ '> 35%',
+                                T ~ 'help'),
+         state_prop = case_when(is.na(state_prop) ~ NA_character_,
+                                state_prop <= 5 ~ '0-5%',
+                                state_prop > 5 & state_prop <= 10 ~ '> 5%, <= 10%',
+                                state_prop > 10 ~ '> 10%',
+                                T ~ 'help')) %>%
+  data.frame() 
 
 # Data formatting for table#####
 # data with month filter
@@ -112,15 +130,18 @@ shinyServer(function(input, output, session) {
   # Input that applies to "importance" ####
   # select proportion of revenue by state
   output$state_select <- renderUI({
-      checkboxGroupInput("state_select", "", choices = unique(data$State),
+      checkboxGroupInput("state_select", "", choices = c('All states','California','Oregon','Washington'),
                          selected = c('Oregon'),
                          inline = T)
   })
+  # output$state_prop <- renderUI({
+  #   sliderInput("state_prop", label = "",
+  #               min = 0, max = state_max, value = c(10, state_max), step = 10)
+  # })
   output$state_prop <- renderUI({
-    sliderInput("state_prop", label = "",
-                min = 0, max = state_max, value = c(10, state_max), step = 10)
+    selectInput("state_prop", "", choices = c('0-5%', '> 5%, <= 10%', '> 10%'),
+                multiple = F, selected = '> 10%')
   })
-  
   
   # Input that applies to seasonality ####
   # Filter by proportion of revenue by month
@@ -129,16 +150,24 @@ shinyServer(function(input, output, session) {
                 multiple = F, selected = 'May')
   })
   
+  # output$month_prop <- renderUI({
+  #   sliderInput("month_prop", label = "",
+  #               min = 0, max = month_max, value = c(20,month_max), step = 10)
+  # })
   output$month_prop <- renderUI({
-    sliderInput("month_prop", label = "",
-                min = 0, max = month_max, value = c(20,month_max), step = 10)
+    selectInput("month_prop", "", choices = c('0-5%', '> 5%, <= 10%', '> 10%, <= 15%', '> 15%, <= 20%', '> 20%'),
+                multiple = F, selected = '> 20%')
+  })
+  # Input that applies to 2020 change ####
+  # output$perc_change <- renderUI({
+  #   sliderInput("perc_change", label = "",
+  #               min = perc_min, max = perc_max, value = c(-20, 0), step = 20)
+  # })
+  output$perc_change <- renderUI({
+    selectInput("perc_change", "", choices = c('-35% or less', '> -35%, <= 0%', '> 0%, <= 35%', '> 35%'),
+                multiple = F, selected = '-35% or less')
   })
   
-  # Input that applies to 2020 change ####
-  output$perc_change <- renderUI({
-    sliderInput("perc_change", label = "",
-                min = perc_min, max = perc_max, value = c(-20, 0), step = 20)
-  })
 # Reactive Data component ####
   filtered <- reactive({
     if(input$filter_ops == "Importance") {
@@ -148,8 +177,9 @@ shinyServer(function(input, output, session) {
              Cumulative == input$cumulInput &
              Interval == input$wkInput &
              State %in% c(input$state_select) &
-             state_prop >= input$state_prop[1] &
-             state_prop <= input$state_prop[2]
+             state_prop == input$state_prop
+             # state_prop >= input$state_prop[1] &
+             # state_prop <= input$state_prop[2]
              ) %>%
         data.frame()
     }
@@ -162,8 +192,9 @@ shinyServer(function(input, output, session) {
           # get rid of the "All states"
           State != 'All states' & 
           select_month == input$month_select &
-          month_prop >= input$month_prop[1] &
-          month_prop <= input$month_prop[2]
+          month_prop == input$month_prop
+          # month_prop >= input$month_prop[1] &
+          # month_prop <= input$month_prop[2]
         )
     }
     else if(input$filter_ops == '2020 change') {
@@ -174,8 +205,9 @@ shinyServer(function(input, output, session) {
                  Interval == input$wkInput &
                  # get rid of the "All states"
                  State != 'All states' & 
-                 percchange >= input$perc_change[1] &
-                 percchange <= input$perc_change[2]
+                 percchange == input$perc_change
+                 # percchange >= input$perc_change[1] &
+                 # percchange <= input$perc_change[2]
         )
     }
     else if(input$filter_ops == "Custom output") {
