@@ -1,10 +1,11 @@
 library(ggplot2)
 library(viridis)
-comp_dat_all
+library(dplyr)
+library(lubridate)
 
-comp_dat_covid_app <- readRDS("comp_dat_all.RDS") 
-confflags <- readRDS("confflags.RDS") %>%
-  subset(Interval == 'Monthly' & Metric == 'EXVESSEL_REVENUE')
+source('confTreat.r')
+source('helperfns.r')
+comp_dat_all <- readRDS("comp_dat_all.RDS") 
 
 
 dat <- subset(comp_dat_all,
