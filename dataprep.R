@@ -27,7 +27,7 @@ comp_dat_raw <- readRDS('comp_dat_raw.RDS') %>%
   mutate(rm = case_when(YEAR == 2020 & LANDING_MONTH > m_cutoff ~ 1,
                         T ~ 0)) %>%
   filter(rm != 1) %>%
-  select(-rm) 
+  select(-rm, -TICKET_SOURCE_CODE) 
 
 # Add in price metric and Remove outliers
 comp_dat_outadj <- comp_dat_raw %>%
@@ -43,7 +43,7 @@ comp_dat_fmt <- comp_dat_outadj %>%
 comp_dat_sub <- filter(comp_dat_fmt#, DAYOFYEAR <= max_2020
   ) %>%
   select( -LANDING_DATE, -DAYOFYEAR) %>%
-  melt(c('VESSEL_NUM','DEALER_NUM','SPECIES_GROUP','YEAR','WEEKOFYEAR', 'LANDING_MONTH', 'AGENCY_CODE')) %>%
+  reshape2::melt(c('VESSEL_NUM','DEALER_NUM','SPECIES_GROUP','YEAR','WEEKOFYEAR', 'LANDING_MONTH', 'AGENCY_CODE')) %>%
   rename(Metric = variable,
          Value = value) %>%
   # Deflator is being used here #
