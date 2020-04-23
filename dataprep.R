@@ -25,11 +25,7 @@ defl_adj <- rbind(defl, defl2020)
 # Load data from data_pull.R ####
 comp_dat_raw <- readRDS('comp_dat_raw.RDS') %>%
   rename(YEAR = LANDING_YEAR) %>%
-  # filter out data that is past the month cutoff
-  mutate(rm = case_when(YEAR == 2020 & LANDING_MONTH > month_cutoff ~ 1,
-                        T ~ 0)) %>%
-  filter(rm != 1) %>%
-  select(-rm, -TICKET_SOURCE_CODE) %>%
+  select(-TICKET_SOURCE_CODE) %>%
   subset(!(AGENCY_CODE == 'C' & SPECIES_GROUP == 'WHITING'))
 
 # Add in price metric and Remove outliers
