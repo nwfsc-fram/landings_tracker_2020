@@ -4,8 +4,10 @@ library(reshape2)
 library(lubridate)
 library(EDCReport)
 library(tidyr)
+#library(fst)
 
 source("confTreat.R")
+source("helperfns.R")
 
 # Set completeness cutoff at 14 days prior to today. All data after this date will be shown with uncertainty
 today <- Sys.Date()
@@ -22,7 +24,13 @@ defl_adj <- rbind(defl, defl2020)
 
 # Load data from data_pull.R ####
 comp_dat_raw <- readRDS('comp_dat_raw.RDS') %>%
-  rename(YEAR = LANDING_YEAR) 
+  rename(YEAR = LANDING_YEAR) %>%
+  # filter out data that is past the month cutoff
+  mutate(rm = case_when(YEAR == 2020 & LANDING_MONTH > m_cutoff ~ 1,
+                        T ~ 0)) %>%
+  filter(rm != 1) %>%
+  select(-rm, -TICKET_SOURCE_CODE) %>%
+  subset(!(AGENCY_CODE == 'C' & SPECIES_GROUP == 'WHITING'))
 
 # Add in price metric and Remove outliers
 comp_dat_outadj <- comp_dat_raw %>%
@@ -37,7 +45,7 @@ comp_dat_fmt <- comp_dat_outadj %>%
 
 comp_dat_sub <- comp_dat_fmt %>%
   select( -LANDING_DATE, -DAYOFYEAR) %>%
-  melt(c('VESSEL_NUM','DEALER_NUM','SPECIES_GROUP','YEAR','WEEKOFYEAR', 'LANDING_MONTH', 'AGENCY_CODE')) %>%
+  reshape2::melt(c('VESSEL_NUM','DEALER_NUM','SPECIES_GROUP','YEAR','WEEKOFYEAR', 'LANDING_MONTH', 'AGENCY_CODE')) %>%
   rename(Metric = variable,
          Value = value) %>%
   # Deflator is being used here #
@@ -55,6 +63,8 @@ comp_dat_all <- comp_dat_sub %>%
   summarize(Value = sum(Value)) %>%
   mutate(CONF = 'NOT_TREATED') %>%
   data.frame()
+
+saveRDS(comp_dat_all, "comp_dat_all.RDS")
 
 # Add in weekly data 
 comp_dat_all_wk <- comp_dat_sub %>%
@@ -175,6 +185,50 @@ cut35_dat <- rbind(cut35, cut35_crab, cut35_sardine) %>%
          Variance = NA_real_,
          N = "")
 
+# baseline comparison
+cutoff_2020 <- subset(comp_dat_final, Year == 2020) %>%
+  group_by(Interval) %>%
+
+only_2020 <- filter(comp_dat_final, 
+  # pull the untreated values
+  CONF == 'NOT_TREATED' &
+  Metric == 'EXVESSEL_REVENUE' & 
+  Statistic == 'Total' &
+  Year == '2020' &
+  Interval == 'Weekly') %>%
+  group_by(Species, State) %>%
+  mutate(cumREV_2020 = cumsum(Value)) %>%
+  right_join(cutoff_2020) %>%
+  select(Species, State, cumREV_2020)  %>%
+  subset(!is.na(Species))
+
+baseline <- filter(comp_dat_final, 
+  # take care of crab disaster
+  !(Year %in% c(2015, 2016) & grepl('CRAB', Species)) &
+  # take care of sardine disasters
+  !(Year %in% c(2015, 2016, 2017, 2018, 2019) & Species == 'SARDINE')  &
+  # pull the untreated values
+  CONF == 'NOT_TREATED' &
+  Metric == 'EXVESSEL_REVENUE' & 
+  Statistic == 'Total' &
+  Year != '2020' &
+  Interval == 'Weekly' &
+  !is.na(Metric)) %>%
+  group_by(Species, State, Year) %>%
+  mutate(cumREV = cumsum(Value)) %>%
+  right_join(cutoff_2020) %>%
+  group_by(Species, State) %>%
+  summarise(cumREV_hist = median(cumREV))%>%
+  subset(!is.na(Species))
+
+baseline_2020 <- full_join(only_2020, baseline) %>%
+  mutate(percchange = (cumREV_2020-cumREV_hist)/cumREV_hist*100) %>%
+  mutate(percdiff = percdiff(cumREV_hist, cumREV_2020)) %>%
+  select(-cumREV_2020, -cumREV_hist) %>%
+  data.table()
+  
+    
+# all data including the 35% cutoff data
 comp_dat_final_cut <- rbind(comp_dat_final, cut35_dat) %>%
   mutate(Cumulative = 'N')
 
@@ -244,44 +298,61 @@ all_combos <- comp_dat_final_cumul %>%
 # Add in 0s for clarity between suppressed v. no data. Without this step combinations with 0 don't show up at all. 
 comp_dat_final_cumul_0s <- merge(all_combos, comp_dat_final_cumul, all.x = T)
 
+# add filter for fisheries
+# proportion within state
+
+sharewithinstate <- subset(comp_dat_all,
+    Metric == 'EXVESSEL_REVENUE' & 
+    YEAR %in% 2014:2019) %>%
+  group_by(AGENCY_CODE, SPECIES_GROUP) %>%
+  summarize(Value = sum(Value, na.rm = T)) %>%
+  ungroup() %>%
+  group_by(AGENCY_CODE) %>%
+  mutate(state_prop = (Value/sum(Value, na.rm = T))*100) %>%
+  select(-Value)
+
+sharewithinmonth <- subset(comp_dat_all,
+    Metric == 'EXVESSEL_REVENUE' & 
+    YEAR %in% 2014:2019) %>%
+  group_by(AGENCY_CODE, SPECIES_GROUP, LANDING_MONTH) %>%
+  summarize(Value = sum(Value, na.rm = T)) %>%
+  ungroup() %>%
+  group_by(AGENCY_CODE, SPECIES_GROUP) %>%
+  mutate(month_prop = (Value/sum(Value, na.rm = T))*100) %>%
+  mutate(select_month = factor(month.abb[LANDING_MONTH], levels = month.abb)) %>%
+  select(-LANDING_MONTH, -Value)
+
+addlfilters <- full_join(sharewithinstate, sharewithinmonth) %>%
+  rename(Species = SPECIES_GROUP,
+    State = AGENCY_CODE) %>%
+  full_join(baseline_2020) %>%
+  ungroup() %>%
+  mutate(Species = convert_sp(Species),
+    State = convert_state(State)) %>%
+  data.frame()
+
+saveRDS(addlfilters, "addlfilters.RDS")
+
+# explore props
+subset(sharewithinstate, AGENCY_CODE != 'F') %>%
+ggplot(aes(x = SPECIES_GROUP, y = state_prop)) +
+  facet_wrap(~AGENCY_CODE) +
+  geom_col()
+
 # Final formatting ####
 app_data <-  comp_dat_final_cumul_0s %>%
   mutate(Metric = case_when(Metric == 'EXVESSEL_REVENUE' ~ 'Exvessel revenue',
                             Metric == 'ROUND_WEIGHT_MTONS' ~ 'Landed weight',
                             Metric == 'price' ~ 'Price (per lb)',
                             T ~ as.character(Metric)),
-         Species = case_when(Species == 'OTHER COASTAL PELAGIC' ~ 'Other coastal pelagic',
-                             Species == 'ANCHOVY' ~ 'Anchovy',
-                             Species == 'SARDINE' ~ 'Sardine',
-                             Species == 'DUNGENESS CRAB' ~ 'Dungeness crab',
-                             Species == 'OTHER CRAB' ~ 'Other crab',
-                             Species == 'NON-WHITING GROUNDFISH NON-IFQ' ~ 'Non-whiting groundfish (non-IFQ)',
-                             Species == 'NON-WHITING GROUNDFISH IFQ' ~ 'Non-whiting groundfish (IFQ)',
-                             Species == 'TUNA' ~ 'Tuna',
-                             Species == 'OTHER' ~ 'Other species',
-                             Species == 'MARKET SQUID' ~ 'Market squid',
-                             Species == 'SALMON' ~ 'Salmon',
-                             Species == 'SHELLFISH' ~ 'Shellfish',
-                             Species == 'SHRIMP' ~ 'Shrimp',
-                             Species == 'WHITING' ~ 'Whiting',
-                             T ~ 'help'),
-         State = case_when(State == 'O' ~ 'Oregon',
-                           State == 'W' ~ 'Washington',
-                           State == 'C' ~ 'California',
-                           State %in% c('All') ~ 'All states',
-                           State %in% c('F') ~ 'At-sea',
-                           T ~ 'help'),
+         
          Type = ifelse(Year %in% 2014:2019, '2014-2019',
                        Year),
          # When we do the all combos merge if data is missing it shows up as NA.
          N = case_when(is.na(N) & Type != 'cut35' & Cumulative != 'Y' ~ 0,
                            T ~ as.numeric(N)),
          Value = case_when(N == 0 ~ 0,
-                       T ~ Value),
-         # decided to only present shellfish for Washington; not enough data to show other crab for OR/WA
-         rm = case_when(Species == 'Shellfish' & State != 'Washington' ~ 1,
-                        Species == 'Other crab' & State != 'California' ~ 1,
-                        T ~ 0)) %>%
+                       T ~ Value)) %>%
   group_by(Metric, Statistic, Cumulative, Interval) %>%
   mutate(unit = case_when(max(Value, na.rm = T) < 1e3 ~ '',
                           max(Value, na.rm = T) < 1e6 ~ 'thousands',
@@ -292,18 +363,11 @@ app_data <-  comp_dat_final_cumul_0s %>%
          q25 = case_when(Year != 2020 ~ NA_real_, 
                          T ~ q25),
          q75 = case_when(Year != 2020 ~ NA_real_,
-                         T ~ q75),
-         Year = as.factor(Year),
-         ylab = case_when(Metric %in% c('Exvessel revenue', 'Price (per lb)') ~
-                            paste0(State, ": ", Species, "\n(", unit, " 2019$)"),
-                          Metric == 'Landed weight' ~
-                            paste0(State, ": ", Species, "\n(", unit, " mt)"),
-                          Metric == 'Number of vessels' ~
-                            paste0(State, ": ", Species, "\n(", unit, ")"),
-                          T ~ paste(State, ": ", Species))
+                         T ~ q75)
     )  %>%
   ungroup() %>%
   mutate(
+    Year = as.factor(Year),
     Value = case_when(
       unit == '' ~ Value,
       unit == 'thousands' ~ Value/1e3,
@@ -336,17 +400,6 @@ app_data <-  comp_dat_final_cumul_0s %>%
                       Statistic == 'Total' ~ Value),
     Type = ifelse(Type == 'cut35', '35% threshold', Type),
     Type = factor(Type, levels = c('2014-2019', '35% threshold', '2020')),
-    # This is for the "active slider" which may not be needed after April.
-    Active = case_when(Species %in% c('Non-whiting groundfish (IFQ)',
-                                      'Non-whiting groundfish (non-IFQ)',
-                                      'Dungeness crab',
-                                      'Other crab',
-                                      'Other species',
-                                      'Shellfish') ~ 'Y',
-                       Species %in% c('Sardine','Anchovy', 'Other coastal pelagic') & State == 'California' ~ 'Y',
-                       Species == 'Shrimp' & State == 'California' ~ 'Y',
-                       Species == 'Tuna' & State == 'California' ~ 'Y',
-                       T ~ 'N'),
     # Formatting the date so it can be plotted appropriately
     Date = case_when(Interval == 'Weekly' & LANDING_MONTH < 2 ~ as.Date(paste0(Year,'-01-01')),
                      Interval == 'Weekly' & LANDING_MONTH > 1 ~ as.Date(lubridate::parse_date_time(
@@ -361,10 +414,10 @@ app_data <-  comp_dat_final_cumul_0s %>%
                          T ~ "complete")) %>%
   filter(rm != 1) %>%
   select(-rm) %>%
-  data.frame()
+  data.frame() 
 
 saveRDS(app_data, "comp_dat_covidapp.RDS")
-
+#write.fst(app_data, "comp_dat_covidapp.fst")
 
 # numbers of years where 2020 is lower
 
