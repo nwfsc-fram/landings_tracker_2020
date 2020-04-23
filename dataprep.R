@@ -26,7 +26,7 @@ defl_adj <- rbind(defl, defl2020)
 comp_dat_raw <- readRDS('comp_dat_raw.RDS') %>%
   rename(YEAR = LANDING_YEAR) %>%
   # filter out data that is past the month cutoff
-  mutate(rm = case_when(YEAR == 2020 & LANDING_MONTH > m_cutoff ~ 1,
+  mutate(rm = case_when(YEAR == 2020 & LANDING_MONTH > month_cutoff ~ 1,
                         T ~ 0)) %>%
   filter(rm != 1) %>%
   select(-rm, -TICKET_SOURCE_CODE) %>%
