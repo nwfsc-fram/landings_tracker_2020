@@ -7,7 +7,7 @@ library(tidyr)
 #library(fst)
 
 source("confTreat.R")
-source("helperfn.R")
+source("helperfns.R")
 
 # Set landing month cutoff for 2020; as of 4/7/2020 we only want to include 2020 data through March
 m_cutoff <- 3
