@@ -7,17 +7,26 @@ library(ggplot2)
 library(dplyr)
 library(DT)
 library(plotly)
-
+library(shinythemes)
+library(shinycssloaders)
+library(appFrame)
 
 ##UI part of the app. The ui piece is not reactive and is used for setting up the permanent pieces of the app.
 # This is where stylesheets can be added
 
-shinyUI(fluidPage(
+shinyUI(fluidPage(theme = shinytheme("cerulean"),
+  appFrameHeaderScrolling(),
   navbarPage(id = "page", collapsible = T, inverse = F,
-             title = "",
+             title = "Landings Tracker",
              tabPanel("Explore the data", value = "results",
+                      h5(em(HTML("This app was designed to be an exploratory tool to look at trends in fisheries landings.<br/> 
+                      Depending on the state and the fishery, the lag in data could be as little as a few days or <br/>
+                      as long as a month. The data that are likely still incomplete are labeled in the table and <br/>
+                      visualized using a blue dotted line. More information about fish ticket completeness <br/>
+                      can be found at http://pacfin.psmfc.org/."))),
+                      h5(strong("Data were updated on April 29, 2020")),
                       sidebarLayout(
-                        sidebarPanel(uiOutput("layoutInput"),
+                        sidebarPanel(uiOutput("layoutInput") %>% withSpinner(color="#0dc5c1"),
                                      # only show the sidebar inputs if interactive plots shown #
                                      conditionalPanel(condition = "input.layoutInput == 'Interactive plots'",
                                                       h4(strong("Filtering options")),
@@ -42,15 +51,14 @@ shinyUI(fluidPage(
                                                       uiOutput("statInput"),
                                                       uiOutput("cumulInput"),
                                                       uiOutput("wkInput"),
-                                                      
                                                       uiOutput("download_Table"))),
                         mainPanel(
                           tabsetPanel(type = "tabs",
                                       tabPanel("Plot", 
                                                conditionalPanel(condition = "input.layoutInput == 'Interactive plots'",
-                                                                plotlyOutput("plot")),
-                                               conditionalPanel(condition = "input.layoutInput == 'Data summaries'",
-                                                                plotOutput("datsmryPlot"))
+                                                                plotlyOutput("plot") %>% withSpinner(color="#0dc5c1")),
+                                               conditionalPanel(condition = "input.layoutInput == 'Timing plots'",
+                                                                img(src = "timing_plot.png", height = '650px', width = '900px'))
                                                ),
                                        # hover = hoverOpts(id ="plot_hover", delay = 50)
 
@@ -65,6 +73,7 @@ shinyUI(fluidPage(
                       )),
              tabPanel("Information page",
                        source("info_page.R")$value)
-  )
+  ),
+  appFrameFooterScrolling()
 )
 )

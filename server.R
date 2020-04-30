@@ -10,7 +10,7 @@ library(dplyr)
 
 comp_dat_covid_app <- readRDS("comp_dat_covidapp.RDS") %>%
   mutate(no_pts = case_when(Type == '2014-2019' ~ 1,
-                            Cumulative == 'Y' & Interval == 'Weekly' & Type == '35% threshold' ~ 1,
+                            Cumulative == 'Y' & Interval == 'Weekly' & Type == 'Baseline' ~ 1,
                             T ~ 0))
 
 # split up the month and other filters befor joining to reduce size of df 
@@ -18,39 +18,21 @@ addlfilters <- readRDS("addlfilters.RDS")
 month_filter <- select(addlfilters, State, Species, month_prop, select_month)
 othr_filter <- select(addlfilters, -c(month_prop, select_month)) %>% distinct()
 
-state_max <- ceiling(max(addlfilters$state_prop))
-month_max <- ceiling(max(addlfilters$month_prop))
-
-perc_min <-  floor(min(addlfilters$percchange, na.rm = T))
-perc_max <- ceiling(max(addlfilters$percchange, na.rm = T))
+# state_max <- ceiling(max(addlfilters$state_prop))
+# month_max <- ceiling(max(addlfilters$month_prop))
+# 
+# perc_min <-  floor(min(addlfilters$percchange, na.rm = T))
+# perc_max <- ceiling(max(addlfilters$percchange, na.rm = T))
 
 # Data formatting for plot ####
 # data with month filter
 data_m <- comp_dat_covid_app %>%
   left_join(month_filter) %>%
-  mutate(month_prop = case_when(is.na(month_prop) ~ NA_character_,
-                                month_prop <= 5 ~ '0-5%',
-                                month_prop > 5 & month_prop <= 10 ~ '> 5%, <= 10%',
-                                month_prop > 10 & month_prop <= 15 ~ '> 10%, <= 15%',
-                                month_prop > 15 & month_prop <= 20 ~ '> 15%, <= 20%',
-                                month_prop > 20 ~ '> 20%',
-                                T ~ 'help'))
   data.frame()
 
 # data with other filters
 data <- comp_dat_covid_app %>%
   left_join(othr_filter) %>%
-  mutate(percchange = case_when(is.na(percchange) ~ NA_character_,
-                                percchange <= -35 ~ '-35% or less',
-                                percchange > -35 & percchange <= 0 ~ '> -35%, <= 0%',
-                                percchange > 0 & percchange <= 35 ~ '> 0%, <= 35%',
-                                percchange > 35 ~ '> 35%',
-                                T ~ 'help'),
-         state_prop = case_when(is.na(state_prop) ~ NA_character_,
-                                state_prop <= 5 ~ '0-5%',
-                                state_prop > 5 & state_prop <= 10 ~ '> 5%, <= 10%',
-                                state_prop > 10 ~ '> 10%',
-                                T ~ 'help')) %>%
   data.frame() 
 
 # Data formatting for table#####
@@ -79,7 +61,7 @@ shinyServer(function(input, output, session) {
   # Input that applies to all ####
   # Select type of output
   output$layoutInput <- renderUI({
-    radioButtons("layoutInput","Output type", choices = c("Interactive plots", "Data summaries"),
+    radioButtons("layoutInput","Output type", choices = c("Interactive plots", "Timing plots"),
                  selected = "Interactive plots", inline = T)
   })
   # Select levels or Cumulative
@@ -105,24 +87,24 @@ shinyServer(function(input, output, session) {
   # Download button#####
   output$download_Table <- renderUI({
     tags$div(class = "actbutton",
-             downloadButton("dlTable", "Download Data Table", class = "btn btn-info"))
+             downloadButton("dlTable", "Download Data Table", class = "btn-primary"))
   })
   
   # Input that applies to "custom input" ####
   # Select management group
   output$mgrpInput <- renderUI({
-    selectInput("mgrpInput", "Species groups", choices = unique(data$Species), multiple = T,
-                       selected = c('Non-whiting groundfish (IFQ)'))
+    selectInput("mgrpInput", "Fishery groups", choices = unique(data$Species), multiple = T,
+                       selected = c('Non-whiting groundfish (IFQ; bottom trawl)'))
   })
   # select state
   output$regionInput <- renderUI({
     if(!'Whiting' %in% input$mgrpInput) {
-    checkboxGroupInput("regionInput", "State", choices = c('All states','California','Oregon','Washington'),
-                       selected = c('All states'),
+    checkboxGroupInput("regionInput", "State", choices = c('All','California','Oregon','Washington'),
+                       selected = c('All'),
                        inline = T)
     } else {
-      checkboxGroupInput("regionInput", "State", choices = c('All states','California','Oregon','Washington', 'At-sea'),
-                         selected = c('All states'),
+      checkboxGroupInput("regionInput", "State", choices = c('All','California','Oregon','Washington', 'At-sea'),
+                         selected = c('All'),
                          inline = T)
     }
   })
@@ -130,7 +112,7 @@ shinyServer(function(input, output, session) {
   # Input that applies to "importance" ####
   # select proportion of revenue by state
   output$state_select <- renderUI({
-      checkboxGroupInput("state_select", "", choices = c('All states','California','Oregon','Washington'),
+      checkboxGroupInput("state_select", "", choices = c('All','California','Oregon','Washington'),
                          selected = c('Oregon'),
                          inline = T)
   })
@@ -139,7 +121,8 @@ shinyServer(function(input, output, session) {
   #               min = 0, max = state_max, value = c(10, state_max), step = 10)
   # })
   output$state_prop <- renderUI({
-    selectInput("state_prop", "", choices = c('0-5%', '> 5%, <= 10%', '> 10%'),
+    selectInput("state_prop", "Filter by percent contribution to state-wide fisheries revenue", 
+                choices = c('0-5%', '5.1-10%', '> 10%'),
                 multiple = F, selected = '> 10%')
   })
   
@@ -155,7 +138,7 @@ shinyServer(function(input, output, session) {
   #               min = 0, max = month_max, value = c(20,month_max), step = 10)
   # })
   output$month_prop <- renderUI({
-    selectInput("month_prop", "", choices = c('0-5%', '> 5%, <= 10%', '> 10%, <= 15%', '> 15%, <= 20%', '> 20%'),
+    selectInput("month_prop", "Filter by percent contribution by month to fisheries revenue", choices = c('0-5%', '5.1-10%', '10.1-15%', '15.1-20%', '> 20%'),
                 multiple = F, selected = '> 20%')
   })
   # Input that applies to 2020 change ####
@@ -164,13 +147,16 @@ shinyServer(function(input, output, session) {
   #               min = perc_min, max = perc_max, value = c(-20, 0), step = 20)
   # })
   output$perc_change <- renderUI({
-    selectInput("perc_change", "", choices = c('-35% or less', '> -35%, <= 0%', '> 0%, <= 35%', '> 35%'),
+    selectInput("perc_change", "", choices = c('-35% or less', '-34.9-0%', '0-35%', '> 35%'),
                 multiple = F, selected = '-35% or less')
   })
   
 # Reactive Data component ####
   filtered <- reactive({
     if(input$filter_ops == "Importance") {
+      
+      req(input$statInput)
+      
     data %>%
       subset(Statistic == input$statInput &
              Metric == input$metricInput &
@@ -190,7 +176,7 @@ shinyServer(function(input, output, session) {
           Cumulative == input$cumulInput &
           Interval == input$wkInput &
           # get rid of the "All states"
-          State != 'All states' & 
+          State != 'All' & 
           select_month == input$month_select &
           month_prop == input$month_prop
           # month_prop >= input$month_prop[1] &
@@ -204,7 +190,7 @@ shinyServer(function(input, output, session) {
                  Cumulative == input$cumulInput &
                  Interval == input$wkInput &
                  # get rid of the "All states"
-                 State != 'All states' & 
+                 State != 'All' & 
                  percchange == input$perc_change
                  # percchange >= input$perc_change[1] &
                  # percchange <= input$perc_change[2]
@@ -232,8 +218,9 @@ shinyServer(function(input, output, session) {
                  Cumulative == input$cumulInput &
                  Interval == input$wkInput &
                  State %in% c(input$state_select) &
-                 state_prop >= input$state_prop[1] &
-                 state_prop <= input$state_prop[2]
+                 state_prop == input$state_prop
+               # state_prop >= input$state_prop[1] &
+               # state_prop <= input$state_prop[2]
         ) %>%
         data.frame()
     }
@@ -244,10 +231,11 @@ shinyServer(function(input, output, session) {
                  Cumulative == input$cumulInput &
                  Interval == input$wkInput &
                  # get rid of the "All states"
-                 State != 'All states' & 
+                 State != 'All' & 
                  select_month == input$month_select &
-                 month_prop >= input$month_prop[1] &
-                 month_prop <= input$month_prop[2]
+                 month_prop == input$month_prop
+               # month_prop >= input$month_prop[1] &
+               # month_prop <= input$month_prop[2]
         )
     }
     else if(input$filter_ops == '2020 change') {
@@ -257,9 +245,10 @@ shinyServer(function(input, output, session) {
                  Cumulative == input$cumulInput &
                  Interval == input$wkInput &
                  # get rid of the "All states"
-                 State != 'All states' & 
-                 percchange >= input$perc_change[1] &
-                 percchange <= input$perc_change[2]
+                 State != 'All' & 
+                 percchange == input$perc_change
+               # percchange >= input$perc_change[1] &
+               # percchange <= input$perc_change[2]
         )
     }
     else if(input$filter_ops == "Custom output") {
@@ -309,11 +298,12 @@ shinyServer(function(input, output, session) {
              !!quo_name(vartitle)         := Variance,
              `Quartile: 25th`              = q25,
              `Quartile: 75th`              = q75,
-              Date                        = Date,
-              Unit                         = unit)
+              Date                         = Date,
+              Unit                         = unit,
+             `Data uncertainty`            = complete)
     
-    alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH','Active', 'no_pts',
-                       'Cumulative','Interval', 'complete')
+    alwaysexclude <- c('ylab','upper','lower','Type', 'LANDING_MONTH', 'no_pts',
+                       'Cumulative','Interval')
     dat <- select(dat, colnames(dat)[apply(dat, 2, function(x) sum(x != '' & x != ' NA' & !is.na(x) & x != 'NA') > 0 )], 
                   -alwaysexclude) 
     
@@ -323,14 +313,18 @@ shinyServer(function(input, output, session) {
   lineColor <- c(
     '2014-2019' = 'lightgray',
     '2020' = 'blue',
-    '35% threshold' = 'red'
+    '2014-2019 Median' = 'red'
   )
   
   # Plot
   output$plot <- renderPlotly({
+    #if(input$wkInput  == 'Weekly') browser()
     if(is.null(filtered())){
       return()
     } else {
+      
+      ptsize = ifelse(input$wkInput == 'Weekly', .1, 1.5)
+      
           print(
       ggplotly(
     ggplot(filtered(),
@@ -344,16 +338,18 @@ shinyServer(function(input, output, session) {
             axis.text = element_text(size = 8),
             strip.text = element_text(size = 10),
             axis.title.x = element_blank(),
-            axis.title.y = element_text(size = 12)) +
+            axis.title.y = element_text(size = 12),
+            panel.spacing.y = unit(2, "lines")) +
       scale_x_date(date_labels = '%b', date_breaks = "1 month") +
       geom_line(data = filter(filtered(), Type == '2014-2019'), size = 0.6,
                 mapping = aes(color = Type)) +
-      geom_line(data = filter(filtered(), Year == 2020), linetype = 'dotted', color = "lightsteelblue") +
-      geom_line(data = filter(filtered(), !is.na(Value) & Type != '2014-2019' & complete != 'uncertain'), linetype = 'dashed') +
+      geom_line(data = filter(filtered(), Year == 2020), linetype = 'dotted', color = "blue") +
+      geom_line(data = filter(filtered(), !is.na(Value) & Type != '2014-2019' & complete != 'uncertain'), 
+                mapping = aes(color = Type), size = 0.1) +
       geom_line(data = filter(filtered(), Type != '2014-2019' & complete != 'uncertain'),
                 mapping = aes(color = Type), size = 0.6) +
       geom_point(data = filter(filtered(), no_pts == 0 & complete != 'uncertain'),
-                 mapping = aes(color = Type), size = 1.5) +
+                 mapping = aes(color = Type), size = ptsize) +
       facet_wrap(~ylab, scales = 'free_y', ncol = 2) +
       labs(y = paste(input$statInput, input$metricInput)),
     tooltip = 'Year',

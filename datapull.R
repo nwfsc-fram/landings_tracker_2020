@@ -24,14 +24,20 @@ pacfin_dat_raw <- dbGetQuery(pacfin, "select landing_year,
                                         END AS vessel_num,
                                       agency_code || dealer_id AS dealer_num,
                          -- Formatting species groups
-                                      CASE WHEN 
-                                        pacfin_species_common_name like '%TUNA%' OR pacfin_species_common_name = 'ALBACORE' 
+                                      CASE WHEN
+                                      inpfc_area_type_code = 'PG' THEN 'PUGET SOUND FISHERIES'
+                                      WHEN pacfin_species_common_name like '%TUNA%' OR pacfin_species_common_name = 'ALBACORE' 
                                         THEN 'TUNA'
                                         WHEN management_group_code = 'GRND' THEN 
-                                          CASE WHEN IS_IFQ_LANDING = 'T' THEN 
+                                         CASE WHEN IS_IFQ_LANDING = 'T' THEN 
                                             CASE WHEN pacfin_species_code = 'PWHT' THEN 'WHITING'
+                                            WHEN PACFIN_GEAR_CODE = 'MDT' THEN 'MIDWATER'
+                                            WHEN DAHL_GROUNDFISH_CODE = '14' THEN 'MIDWATER'
                                               ELSE 'NON-WHITING GROUNDFISH IFQ' END
-                                          ELSE 'NON-WHITING GROUNDFISH NON-IFQ' END
+                                         WHEN DAHL_GROUNDFISH_CODE IN ('05','06') THEN 'NEARSHORE GROUNDFISH'
+                                         WHEN DAHL_GROUNDFISH_CODE IN ('07','08','09','10','20') THEN 'OFFSHORE GROUNDFISH'
+                                         WHEN DAHL_GROUNDFISH_CODE IN ('11','12','13','14') THEN 'OTHER'
+                                         ELSE 'NON-WHITING GROUNDFISH NON-IFQ' END 
                                         WHEN 
                                         management_group_code = 'CPEL'
                                         THEN CASE WHEN 
@@ -76,12 +82,15 @@ pacfin_dat_raw <- dbGetQuery(pacfin, "select landing_year,
                                           AND inpfc_area_type_code NOT IN ('CT','VC','GS')
                                           AND landing_year >= 2014 
                                           AND exvessel_revenue > 0
+                            -- Excluding tribal -- 
+                                          AND FLEET_CODE <> 'TI'
                                      GROUP BY
                                         landing_year,
                                         landing_month,
                                         landing_date,
                                         agency_code,
                                         ticket_source_code,
+
                                         CASE WHEN 
                                           management_group_code IN ('SHLL','SRMP') 
                                           THEN nvl(TO_CHAR(vessel_id),fisher_license_num)
@@ -89,13 +98,19 @@ pacfin_dat_raw <- dbGetQuery(pacfin, "select landing_year,
                                           END,
                                         agency_code || dealer_id,
                                         CASE WHEN 
-                                        pacfin_species_common_name like '%TUNA%' OR pacfin_species_common_name = 'ALBACORE' 
+                                        inpfc_area_type_code = 'PG' THEN 'PUGET SOUND FISHERIES'
+                                      WHEN pacfin_species_common_name like '%TUNA%' OR pacfin_species_common_name = 'ALBACORE' 
                                         THEN 'TUNA'
                                         WHEN management_group_code = 'GRND' THEN 
-                                          CASE WHEN IS_IFQ_LANDING = 'T' THEN 
+                                         CASE WHEN IS_IFQ_LANDING = 'T' THEN 
                                             CASE WHEN pacfin_species_code = 'PWHT' THEN 'WHITING'
+                                            WHEN PACFIN_GEAR_CODE = 'MDT' THEN 'MIDWATER'
+                                            WHEN DAHL_GROUNDFISH_CODE = '14' THEN 'MIDWATER'
                                               ELSE 'NON-WHITING GROUNDFISH IFQ' END
-                                          ELSE 'NON-WHITING GROUNDFISH NON-IFQ' END
+                                         WHEN DAHL_GROUNDFISH_CODE IN ('05','06') THEN 'NEARSHORE GROUNDFISH'
+                                         WHEN DAHL_GROUNDFISH_CODE IN ('07','08','09','10','20') THEN 'OFFSHORE GROUNDFISH'
+                                         WHEN DAHL_GROUNDFISH_CODE IN ('11','12','13','14') THEN 'OTHER'
+                                         ELSE 'NON-WHITING GROUNDFISH NON-IFQ' END 
                                          WHEN 
                                         management_group_code = 'CPEL'
                                         THEN CASE WHEN 
@@ -175,16 +190,9 @@ norpac_dat_raw <- dbGetQuery(pacfin, "SELECT landing_year,
                                    SUM(retained_weight_mtons) AS round_weight_mtons,
                                    SUM(exvessel_revenue) AS exvessel_revenue
                                    FROM pacfin_marts.comprehensive_npac
-                                   WHERE
-                                   pacfin_species_code != 'XXXX'
-                                   AND retained_weight_lbs != 0
-                                   AND landing_year >= 2014
-                                   AND exvessel_revenue > 0
-                                   GROUP BY
-                                   landing_year,
-                                   landing_month,
-                                   landing_day,
-                                   nvl2(catcher_vessel_id,catcher_vessel_id,processor_vessel_id),
+                                   WHERE pacfin_species_code != 'XXXX' AND retained_weight_lbs != 0 AND landing_year >= 2014 AND exvessel_revenue > 0
+                                     and sector <> 'TRIBAL'
+                                   GROUP BY landing_year, landing_month, landing_day, nvl2(catcher_vessel_id,catcher_vessel_id,processor_vessel_id),
                                    processor_vessel_id,
                                    -- Formatting species groups --
                                       CASE WHEN 

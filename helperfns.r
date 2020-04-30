@@ -8,8 +8,11 @@ convert_sp <- function(Species) {
       Species == 'SARDINE' ~ 'Sardine',
       Species == 'DUNGENESS CRAB' ~ 'Dungeness crab',
       Species == 'OTHER CRAB' ~ 'Other crab',
-      Species == 'NON-WHITING GROUNDFISH NON-IFQ' ~ 'Non-whiting groundfish (non-IFQ)',
-      Species == 'NON-WHITING GROUNDFISH IFQ' ~ 'Non-whiting groundfish (IFQ)',
+      Species == 'NEARSHORE GROUNDFISH' ~ 'Non-whiting groundfish (Fixed gear; nearshore)',
+      Species == 'OFFSHORE GROUNDFISH' ~ 'Non-whiting groundfish (Fixed gear; non-nearshore)',
+      Species == 'NON-WHITING GROUNDFISH NON-IFQ' ~ 'Non-whiting groundfish (Fixed gear; other)',
+      Species == 'NON-WHITING GROUNDFISH IFQ' ~ 'Non-whiting groundfish (IFQ; bottom trawl)',
+      Species == 'MIDWATER' ~ 'Non-whiting groundfish (IFQ; midwater trawl)',
       Species == 'TUNA' ~ 'Tuna',
       Species == 'OTHER' ~ 'Other species',
       Species == 'MARKET SQUID' ~ 'Market squid',
@@ -17,6 +20,8 @@ convert_sp <- function(Species) {
       Species == 'SHELLFISH' ~ 'Shellfish (excl. aquaculture)',
       Species == 'SHRIMP' ~ 'Shrimp',
       Species == 'WHITING' ~ 'Whiting',
+      Species == 'PUGET SOUND FISHERIES' ~ 'Puget Sound fisheries',
+      Species == 'ALL NON-WHITING' ~ 'All non-whiting groundfish',
       T ~ 'help'
     )
   
@@ -28,7 +33,7 @@ convert_state <- function(State) {
     State == 'O' ~ 'Oregon',
     State == 'W' ~ 'Washington',
     State == 'C' ~ 'California',
-    State %in% c('All') ~ 'All states',
+    State %in% c('All') ~ 'All',
     State %in% c('F') ~ 'At-sea',
     T ~ 'help'
   )

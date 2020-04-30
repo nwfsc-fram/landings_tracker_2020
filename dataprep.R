@@ -10,9 +10,13 @@ source("confTreat.R")
 source("helperfns.R")
 
 # Set completeness cutoff at 14 days prior to today. All data after this date will be shown with uncertainty
+# For Washington apply 28 day cutoff.
 today <- Sys.Date()
 completeness_cutoff <- today - 14
 month_cutoff <- month(completeness_cutoff) - 1
+# cutoffs for washington
+wk4_completeness <- today - 28
+wk4_month <- month(wk4_completeness) - 1
 
 # Deflator #####
 # Currently coded to treat 2020 as 2019$
@@ -22,11 +26,32 @@ defl2020 <- filter(defl, YEAR == 2019) %>%
   mutate(YEAR = 2020)
 defl_adj <- rbind(defl, defl2020)
 
+# species groups changes
+wa_othr <- c('OTHER CRAB', 'ANCHOVY', 'SARDINE', 'OTHER COASTAL PELAGIC')
+
 # Load data from data_pull.R ####
-comp_dat_raw <- readRDS('comp_dat_raw.RDS') %>%
+comp_dat_raw1 <- readRDS('comp_dat_raw.RDS') %>%
   rename(YEAR = LANDING_YEAR) %>%
   select(-TICKET_SOURCE_CODE) %>%
-  subset(!(AGENCY_CODE == 'C' & SPECIES_GROUP == 'WHITING'))
+  subset(!(AGENCY_CODE == 'C' & SPECIES_GROUP == 'WHITING')) %>%
+  # remove shellfish
+  subset(SPECIES_GROUP != 'SHELLFISH') %>%
+  # move wa/or cps into other species
+  mutate(SPECIES_GROUP = case_when(AGENCY_CODE %in% c('W', 'O') & SPECIES_GROUP %in% wa_othr ~ 'OTHER',
+                                   T ~ SPECIES_GROUP))
+
+# Creat an "all non-whiting groundfish" category
+comp_dat_raw <- comp_dat_raw1 %>%
+  rbind(filter(comp_dat_raw1, SPECIES_GROUP %in% c('NEARSHORE GROUNDFISH',
+                                                   'OFFSHORE GROUNDFISH',
+                                                   'NON-WHITING GROUNDFISH NON-IFQ',
+                                                   'NON-WHITING GROUNDFISH IFQ',
+                                                   'MIDWATER')) %>%
+          mutate(SPECIES_GROUP = 'ALL NON-WHITING') %>%
+          group_by(YEAR, LANDING_MONTH, LANDING_DATE, AGENCY_CODE, VESSEL_NUM, DEALER_NUM, SPECIES_GROUP) %>%
+          summarize(ROUND_WEIGHT_MTONS = sum(ROUND_WEIGHT_MTONS),
+                    EXVESSEL_REVENUE = sum(EXVESSEL_REVENUE)) %>%
+          data.frame())
 
 # Add in price metric and Remove outliers
 comp_dat_outadj <- comp_dat_raw %>%
@@ -156,22 +181,22 @@ comp_dat_final <- rbind(comp_dat_avg, comp_dat_tot, comp_dat_n) %>%
 cut35_crab <- filter(comp_dat_final, !Year %in% c(2015, 2016, 2020) & CONF == 'NOT_TREATED' 
                      & grepl('CRAB', Species)) %>%
   group_by(Species, State, LANDING_MONTH, Metric, Statistic, Interval) %>%
-  summarise(Value = median(Value) * .65) %>%
-  mutate(Year = 'cut35') %>%
+  summarise(Value = median(Value)) %>%
+  mutate(Year = 'Baseline') %>%
   data.frame()
 
 cut35_sardine <- filter(comp_dat_final, !Year %in% 2015:2020 & CONF == 'NOT_TREATED' 
                         & Species == 'SARDINE') %>%
   group_by(Species, State, LANDING_MONTH, Metric, Statistic, Interval) %>%
-  summarise(Value = median(Value) * .65) %>%
-  mutate(Year = 'cut35') %>%
+  summarise(Value = median(Value)) %>%
+  mutate(Year = 'Baseline') %>%
   data.frame()
 
 cut35 <- subset(comp_dat_final, Year != 2020 & CONF == 'NOT_TREATED' 
                 & !grepl('CRAB', Species) & Species != 'SARDINE') %>%
   group_by(Species, State, LANDING_MONTH, Metric, Statistic, Interval) %>%
-  summarise(Value = median(Value) * .65) %>%
-  mutate(Year = 'cut35') %>%
+  summarise(Value = median(Value)) %>%
+  mutate(Year = 'Baseline') %>%
   data.frame()
 
 cut35_dat <- rbind(cut35, cut35_crab, cut35_sardine) %>%
@@ -267,7 +292,7 @@ comp_dat_final_cumul <- subset(comp_dat_final_cut, Statistic == 'Total'
   data.frame() %>%
   rbind(comp_dat_final_cut) %>%
   mutate(rm_conf = case_when(Cumulative == 'Y' ~ 0,
-                             Year == 'cut35' ~ 0,
+                             Year == 'Baseline' ~ 0,
                              Metric %in% c('Number of vessels', 'Number of buyers') ~ 0,
                              CONF == 'NOT_TREATED' ~ 1,
                              T ~ 0)) %>%
@@ -325,16 +350,35 @@ addlfilters <- full_join(sharewithinstate, sharewithinmonth) %>%
   full_join(baseline_2020) %>%
   ungroup() %>%
   mutate(Species = convert_sp(Species),
-    State = convert_state(State)) %>%
+    State = convert_state(State),
+    month_prop = case_when(is.na(month_prop) ~ NA_character_,
+                           month_prop <= 5 ~ '0-5%',
+                           month_prop > 5 & month_prop <= 10 ~ '> 5%, <= 10%',
+                           month_prop > 10 & month_prop <= 15 ~ '> 10%, <= 15%',
+                           month_prop > 15 & month_prop <= 20 ~ '> 15%, <= 20%',
+                           month_prop > 20 ~ '> 20%',
+                           T ~ 'help'),
+    percchange = case_when(is.na(percchange) ~ NA_character_,
+                           percchange <= -35 ~ '-35% or less',
+                           percchange > -35 & percchange <= 0 ~ '> -35%, <= 0%',
+                           percchange > 0 & percchange <= 35 ~ '> 0%, <= 35%',
+                           percchange > 35 ~ '> 35%',
+                           T ~ 'help'),
+    state_prop = case_when(is.na(state_prop) ~ NA_character_,
+                           state_prop <= 5 ~ '0-5%',
+                           state_prop > 5 & state_prop <= 10 ~ '> 5%, <= 10%',
+                           state_prop > 10 ~ '> 10%',
+                           T ~ 'help')
+    ) %>%
   data.frame()
 
 saveRDS(addlfilters, "addlfilters.RDS")
 
 # explore props
-subset(sharewithinstate, AGENCY_CODE != 'F') %>%
-ggplot(aes(x = SPECIES_GROUP, y = state_prop)) +
-  facet_wrap(~AGENCY_CODE) +
-  geom_col()
+# subset(sharewithinstate, AGENCY_CODE != 'F') %>%
+# ggplot(aes(x = SPECIES_GROUP, y = state_prop)) +
+#   facet_wrap(~AGENCY_CODE) +
+#   geom_col()
 
 # Final formatting ####
 app_data <-  comp_dat_final_cumul_0s %>%
@@ -347,7 +391,7 @@ app_data <-  comp_dat_final_cumul_0s %>%
          Type = ifelse(Year %in% 2014:2019, '2014-2019',
                        Year),
          # When we do the all combos merge if data is missing it shows up as NA.
-         N = case_when(is.na(N) & Type != 'cut35' & Cumulative != 'Y' ~ 0,
+         N = case_when(is.na(N) & Type != 'Baseline' & Cumulative != 'Y' ~ 0,
                            T ~ as.numeric(N)),
          Value = case_when(N == 0 ~ 0,
                        T ~ Value)) %>%
@@ -403,8 +447,8 @@ app_data <-  comp_dat_final_cumul_0s %>%
     lower = case_when(Statistic == 'Mean' ~ Value - Variance,
                       Statistic == 'Median' ~ q25,
                       Statistic == 'Total' ~ Value),
-    Type = ifelse(Type == 'cut35', '35% threshold', Type),
-    Type = factor(Type, levels = c('2014-2019', '35% threshold', '2020')),
+    Type = ifelse(Type == 'Baseline', '2014-2019 Median', Type),
+    Type = factor(Type, levels = c('2014-2019', '2014-2019 Median', '2020')),
     # Formatting the date so it can be plotted appropriately
     Date = case_when(Interval == 'Weekly' & LANDING_MONTH < 2 ~ as.Date(paste0(Year,'-01-01')),
                      Interval == 'Weekly' & LANDING_MONTH > 1 ~ as.Date(lubridate::parse_date_time(
@@ -414,17 +458,16 @@ app_data <-  comp_dat_final_cumul_0s %>%
                               Interval == 'Weekly' & LANDING_MONTH > 1 ~ as.Date(lubridate::parse_date_time(
                                 paste(2001, LANDING_MONTH, 'Sun', sep="/"),'Y/W/a')),
                               Interval == 'Monthly' ~ ymd(paste0('2001', LANDING_MONTH, '-01'))),
-    complete = case_when(Interval == 'Weekly' & Date >= completeness_cutoff ~ "uncertain",
+    # apply completeness/uncertainty logic. best understanding is that WA is 4 week lag, apply different logic for WA
+    complete = case_when(State == 'Washington' & Statistic == 'Total' & Interval == 'Weekly' 
+                          & Date >= wk4_completeness ~ "uncertain",
+                         State == 'Washington' & Statistic == 'Total' & Interval == 'Monthly' & Year == 2020 &
+                           month(Date) > wk4_month ~ "uncertain",
+                         Interval == 'Weekly' & Date >= completeness_cutoff ~ "uncertain",
                          Interval == 'Monthly' & Year == 2020 & month(Date) > month_cutoff ~ "uncertain",
-                         T ~ "complete"),
-    # decided to only present shellfish for Washington; not enough data to show other crab for OR/WA
-    rm = case_when(Species == 'Shellfish (excl aquaculture)' & State != 'Washington' ~ 1,
-                   Species == 'Other crab' & State != 'California' ~ 1,
-                   T ~ 0)) %>%
-  filter(rm != 1) %>%
-  select(-rm) %>%
+                         T ~ "complete")) %>%
   data.frame() 
-  
+
 saveRDS(app_data, "comp_dat_covidapp.RDS")
 #write.fst(app_data, "comp_dat_covidapp.fst")
 
